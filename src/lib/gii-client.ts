@@ -15,6 +15,12 @@ const cache = new LRUCache<string>(300, 3_600_000);
 
 // ── 타입 ──
 
+export interface CrossReference {
+  law: string;
+  section: string;
+  display: string;
+}
+
 export interface LawSection {
   law: string;
   lawName: string;
@@ -22,6 +28,9 @@ export interface LawSection {
   title: string;
   content: string;
   url: string;
+  crossReferences: CrossReference[];
+  source: "GII" | "NeuRIS";
+  fetchedAt: string;
 }
 
 export interface TocEntry {
@@ -112,6 +121,64 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+/**
+ * 조문 텍스트에서 교차참조(§ 참조)를 추출한다
+ *
+ * 패턴 예시:
+ *   § 439 → { law: same, section: "439" }
+ *   §§ 440, 323 → 두 개 추출
+ *   § 280 Abs. 1 → { law: same, section: "280" }
+ *   Art. 1 GG → { law: "GG", section: "1" }
+ */
+function extractCrossReferences(content: string, currentLaw: string): CrossReference[] {
+  const refs: CrossReference[] = [];
+  const seen = new Set<string>();
+
+  // §§ 440, 323 und 326 Abs. 5 패턴
+  const multiPattern = /§§?\s*([\d]+[a-z]?)(?:\s*(?:,|und|bis|oder)\s*([\d]+[a-z]?))*(?:\s+(\w+))?/gi;
+  let match;
+  while ((match = multiPattern.exec(content)) !== null) {
+    const fullMatch = match[0];
+    // 숫자만 추출
+    const numbers = fullMatch.match(/\d+[a-z]?/g);
+    // 법률명이 뒤에 있는지 확인
+    const lawMatch = fullMatch.match(/\d+[a-z]?\s+(BGB|StGB|GG|HGB|ZPO|StPO|AO|EStG|UStG|KStG|GewStG|VwVfG|VwGO|InsO|GmbHG|AktG|SGB|BetrVG|KSchG|BauGB|UrhG|PatG|MarkenG|UWG|GWB|BDSG|BImSchG|FGO|OWiG|AGG)\b/i);
+    const refLaw = lawMatch ? lawMatch[1] : currentLaw;
+
+    if (numbers) {
+      for (const num of numbers) {
+        const key = `${refLaw}:${num}`;
+        if (!seen.has(key) && num !== "0") {
+          seen.add(key);
+          const prefix = refLaw === "GG" ? "Art." : "§";
+          refs.push({
+            law: refLaw,
+            section: num,
+            display: `${prefix} ${num} ${refLaw}`,
+          });
+        }
+      }
+    }
+  }
+
+  // Art. N GG 패턴
+  const artPattern = /Art\.?\s*(\d+[a-z]?)\s+(GG|EGBGB)\b/gi;
+  while ((match = artPattern.exec(content)) !== null) {
+    const key = `${match[2]}:${match[1]}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      refs.push({
+        law: match[2],
+        section: match[1],
+        display: `Art. ${match[1]} ${match[2]}`,
+      });
+    }
+  }
+
+  // 자기 자신 제거
+  return refs.filter((r) => !(r.law === currentLaw && r.section === content));
+}
+
 // ── 공개 API ──
 
 /**
@@ -145,6 +212,8 @@ export async function getLawSection(
     );
   }
 
+  const crossReferences = extractCrossReferences(content, abbreviation);
+
   return {
     law: abbreviation,
     lawName: lawInfo.name,
@@ -152,6 +221,9 @@ export async function getLawSection(
     title,
     content,
     url,
+    crossReferences,
+    source: "GII" as const,
+    fetchedAt: new Date().toISOString(),
   };
 }
 

@@ -44,6 +44,7 @@ export async function searchCaseLawTool(input: SearchCaseLawInput): Promise<stri
     }
 
     const lines: string[] = [
+      `[VERIFIED — NeuRIS API] ${new Date().toISOString().slice(0, 10)}`,
       `[판례 검색결과: "${query}" — ${courtLabel} — ${result.totalItems}건]`,
       "",
     ];

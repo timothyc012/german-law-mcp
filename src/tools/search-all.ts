@@ -26,6 +26,7 @@ export async function searchAllTool(input: SearchAllInput): Promise<string> {
     }
 
     const lines: string[] = [
+      `[VERIFIED — NeuRIS API] ${new Date().toISOString().slice(0, 10)}`,
       `[통합 검색결과: "${query}" — ${result.totalItems}건]`,
       "",
     ];

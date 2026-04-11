@@ -28,6 +28,7 @@ export async function getCaseText(input: GetCaseTextInput): Promise<string> {
     const text = stripHtml(html);
 
     const lines: string[] = [
+      `[VERIFIED — NeuRIS 원문확인] ${new Date().toISOString().slice(0, 10)}`,
       `[판결문: ${documentNumber}]`,
       "",
       `법원: ${meta.courtName ?? "불명"} (${meta.courtType ?? ""})`,

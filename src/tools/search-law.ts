@@ -24,6 +24,7 @@ export async function searchLaw(input: SearchLawInput): Promise<string> {
 
     if (result.totalItems > 0) {
       const lines: string[] = [
+        `[VERIFIED — NeuRIS API] ${new Date().toISOString().slice(0, 10)}`,
         `[법령 검색결과: "${query}" — ${result.totalItems}건]`,
         "",
       ];
@@ -53,6 +54,7 @@ export async function searchLaw(input: SearchLawInput): Promise<string> {
     const tocEntry = await searchTocByAbbreviation(query);
     if (tocEntry) {
       return [
+        `[VERIFIED — GII 목차매칭] ${new Date().toISOString().slice(0, 10)}`,
         `[법령 검색결과: "${query}" — GII 매칭 1건]`,
         "",
         `1. ${tocEntry.title}`,
