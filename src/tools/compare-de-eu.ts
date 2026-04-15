@@ -13,6 +13,7 @@
  */
 
 import { z } from "zod";
+import { fetchByCelex, buildEurLexUrl, type EurLexDocument } from "../lib/eurlex-client.js";
 
 // ── Vergleichsdatenbank ───────────────────────────────────────────────────
 
@@ -193,6 +194,28 @@ const VERGLEICHSDATENBANK: EuDeVergleich[] = [
   },
 ];
 
+// ── CELEX 번호 매핑 ───────────────────────────────────────────────────────
+
+const CELEX_MAP: Record<string, string> = {
+  "datenschutz": "32016R0679",   // DSGVO
+  "dsgvo": "32016R0679",
+  "gdpr": "32016R0679",
+  "kaufrecht": "32019L0771",     // Warenkauf-RL
+  "verbraucher": "32019L0771",
+  "arbeitszeit": "32003L0088",   // Arbeitszeitrichtlinie
+  "produkthaftung": "31985L0374", // ProdHaft-RL
+  "kartellrecht": "32003R0001",   // VO 1/2003
+  "wettbewerb": "32003R0001",
+};
+
+function resolveCelex(thema: string): string | undefined {
+  const lower = thema.toLowerCase();
+  for (const [key, celex] of Object.entries(CELEX_MAP)) {
+    if (lower.includes(key)) return celex;
+  }
+  return undefined;
+}
+
 function findVergleich(thema: string): EuDeVergleich | undefined {
   const lower = thema.toLowerCase();
   let best: { eintrag: EuDeVergleich; score: number } | undefined;
@@ -246,6 +269,32 @@ export async function compareDeEu(input: CompareDeEuInput): Promise<string> {
   lines.push("");
   lines.push(`  Thema: ${input.thema}`);
   lines.push("");
+
+  // ── [0] EUR-Lex Live Status ──────────────────────────────────────────────
+  const celex = resolveCelex(input.thema);
+  if (celex) {
+    let liveDoc: EurLexDocument | null = null;
+    let liveError = false;
+    try {
+      liveDoc = await fetchByCelex(celex);
+    } catch {
+      liveError = true;
+    }
+
+    lines.push("  ── [0] EUR-LEX LIVE STATUS ──────────────────────────────────");
+    lines.push(`  CELEX: ${celex}`);
+    if (liveDoc && !liveError) {
+      lines.push(`  Titel: ${liveDoc.title}`);
+      lines.push(`  Datum: ${liveDoc.date}`);
+      lines.push("  Status: In Kraft ✅");
+      lines.push(`  Link:  ${buildEurLexUrl(celex, "DE")}`);
+      lines.push("  [Daten live von EUR-Lex CELLAR API]");
+    } else {
+      lines.push(`  Link:  ${buildEurLexUrl(celex, "DE")}`);
+      lines.push("  [Live-Abfrage nicht verfügbar — statische Daten werden verwendet]");
+    }
+    lines.push("");
+  }
 
   if (!vergleich) {
     lines.push("  ⚠  Kein Vergleichseintrag für dieses Thema gefunden.");

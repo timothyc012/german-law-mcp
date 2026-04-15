@@ -6,7 +6,7 @@
  * 독일 연방법률 검색 및 조회를 위한 MCP 서버.
  * NeuRIS API + Gesetze im Internet을 데이터 소스로 사용한다.
  *
- * 도구 목록 (22개):
+ * 도구 목록 (24개):
  * ── 기본 검색 ──────────────────────────────────────────
  *  1. search_law          — 법률 키워드 검색 (GII)
  *  2. get_law_section     — 특정 조문 전문 조회
@@ -19,22 +19,25 @@
  * ── 검증 / 이력 ────────────────────────────────────────
  *  8. verify_citation     — 판례 인용 검증 (환각 방지)
  *  9. get_norm_version    — 법령 역사적 버전 조회
+ * 10. get_amendment_history — BGBl 개정 이력 조회 (GII + Wissensbasis)
  * ── 심층 분석 ──────────────────────────────────────────
- * 10. gutachten_scaffold  — 법률 감정서 구조 자동 생성
- * 11. spot_issues         — 사실관계 법적 이슈 스포터
- * 12. analyze_case        — 판례 심층 분석 (리드자츠, 규범망)
- * 13. get_norm_context    — 법령 맥락 조회 (인접·관련 조문)
- * 14. search_state_courts — OLG/LG 판례 검색 (openjur.de)
- * 15. analyze_scenario    — 시나리오 기반 청구원인 분석
- * 16. compare_de_eu       — 독일-EU법 교차비교
+ * 11. gutachten_scaffold  — 법률 감정서 구조 자동 생성
+ * 12. spot_issues         — 사실관계 법적 이슈 스포터
+ * 13. analyze_case        — 판례 심층 분석 (리드자츠, 규범망)
+ * 14. get_norm_context    — 법령 맥락 조회 (인접·관련 조문)
+ * 15. search_state_courts — OLG/LG 판례 검색 (openjur.de)
+ * 16. analyze_scenario    — 시나리오 기반 청구원인 분석
+ * 17. compare_de_eu       — 독일-EU법 교차비교 (EUR-Lex 실시간 연동)
  * ── 품질 / 고급 분석 (Phase 4) ─────────────────────────
- * 17. get_delegation_chain — 3단계 위임 체계 추적 (법률→시행령→행정규칙)
- * 18. search_with_grade    — 소스 신뢰도 등급(A-D) 포함 통합 검색
- * 19. extract_cross_refs   — 조문 교차참조 추출 (타 법률·EU법령 링크)
- * 20. quality_gate         — 14단계 법률 분석 품질 자동 검증
+ * 18. get_delegation_chain — 3단계 위임 체계 추적 (법률→시행령→행정규칙)
+ * 19. search_with_grade    — 소스 신뢰도 등급(A-D) 포함 통합 검색
+ * 20. extract_cross_refs   — 조문 교차참조 추출 (타 법률·EU법령 링크)
+ * 21. quality_gate         — 14단계 법률 분석 품질 자동 검증
  * ── 주법 (Phase 5) ─────────────────────────────────────
- * 21. search_state_law     — 16개 주 주요 법령 검색 (약어·분야·주코드)
- * 22. get_state_law_section — 주법 조문 조회 (Bayern 실시간 파싱)
+ * 22. search_state_law     — 16개 주 주요 법령 검색 (약어·분야·주코드)
+ * 23. get_state_law_section — 주법 조문 조회 (Bayern 실시간 파싱)
+ * ── 사전 / 용어 (Phase 6) ──────────────────────────────
+ * 24. lookup_legal_term    — 독일 법률 용어 사전 (40+ 용어, 한국어/영어)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -76,17 +79,21 @@ import { qualityGateSchema, qualityGate } from "./tools/quality-gate.js";
 import { searchStateLawSchema, searchStateLaw } from "./tools/search-state-law.js";
 import { getStateLawSectionSchema, getStateLawSectionTool } from "./tools/get-state-law-section.js";
 
+// 개정 이력 / 사전 도구 (Phase 6)
+import { getAmendmentHistorySchema, getAmendmentHistory } from "./tools/get-amendment-history.js";
+import { lookupLegalTermSchema, lookupLegalTerm } from "./tools/lookup-legal-term.js";
+
 const server = new McpServer({
   name: "german-law-mcp",
-  version: "0.5.0",
+  version: "0.6.0",
   description:
-    "German law MCP server — 22 tools covering federal legislation, court decisions, " +
-    "fee calculation, deadline computation, citation verification, legal analysis, " +
-    "German-EU law comparison, delegation chain tracing, source grading, " +
-    "cross-reference extraction, 14-gate quality validation, " +
-    "and state law (Landesrecht) for all 16 German states. " +
+    "German law MCP server — 24 tools covering federal legislation, court decisions, " +
+    "fee calculation, deadline computation, citation verification, amendment history, " +
+    "legal analysis, German-EU law comparison (EUR-Lex live), delegation chain tracing, " +
+    "source grading, cross-reference extraction, 14-gate quality validation, " +
+    "state law (Landesrecht) for all 16 German states, and legal dictionary (40+ terms). " +
     "Data: NeuRIS (81,924 federal decisions) + gesetze-im-internet.de + " +
-    "gesetze-bayern.de (live parsing) + openjur.de (state courts).",
+    "gesetze-bayern.de (live parsing) + openjur.de (state courts) + EUR-Lex CELLAR API.",
 });
 
 // ── [1] 기본 검색 도구 ─────────────────────────────────────────────────────
@@ -453,6 +460,41 @@ server.registerTool(
   async (params) => {
     const input = getStateLawSectionSchema.parse(params);
     const result = await getStateLawSectionTool(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+// ── [8] 개정 이력 / 사전 도구 (Phase 6) ────────────────────────────────────
+
+server.registerTool(
+  "get_amendment_history",
+  {
+    description:
+      "독일 연방법령의 개정 이력 조회. BGBl(연방관보) 참조와 함께 언제 무엇이 바뀌었는지 타임라인으로 반환. " +
+      "지원 법률: BGB, BDSG, DSGVO, ZPO, StGB, TMG, GG 등. " +
+      "GII(gesetze-im-internet.de) 실시간 파싱 + 하드코딩 데이터 병합.",
+    inputSchema: getAmendmentHistorySchema.shape,
+  },
+  async (params) => {
+    const input = getAmendmentHistorySchema.parse(params);
+    const result = await getAmendmentHistory(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "lookup_legal_term",
+  {
+    description:
+      "독일 법률 용어 사전. 독일어 법률 용어를 한국어/영어로 설명. " +
+      "민법(Sachmangel, Verjährung, Schadensersatz ...), 형법(Tatbestand, Vorsatz ...), " +
+      "절차법(Klage, Berufung, Beweislast ...), 방법론(Gutachtenstil, Subsumtion ...) " +
+      "40개 이상 용어 수록. 퍼지 검색으로 유사 용어 자동 제안.",
+    inputSchema: lookupLegalTermSchema.shape,
+  },
+  async (params) => {
+    const input = lookupLegalTermSchema.parse(params);
+    const result = await lookupLegalTerm(input);
     return { content: [{ type: "text", text: result }] };
   },
 );
