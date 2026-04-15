@@ -83,25 +83,33 @@ const LANDES_FEIERTAGE: Record<string, (jahr: number, ostern: Date) => Date[]> =
   ],
   BE: (j) => j >= 2019 ? [new Date(j, 2, 8)] : [], // Internationaler Frauentag (seit 2019)
   BB: (j, o) => [
-    addTage(o, 60),                                         // Fronleichnam
+    new Date(o),                                            // Ostersonntag (§ 1 Abs. 2 Nr. 2 BbgFTG)
     new Date(j, 9, 31),                                     // Reformationstag
     ...(j >= 2024 ? [new Date(j, 2, 8)] : []),              // Internationaler Frauentag (seit 2024, § 1 Abs. 2 Nr. 10 BbgFTG)
+    // Hinweis: Fronleichnam ist in BB kein landesweiter Feiertag (nur bestimmte Gemeinden)
   ],
   HB: (j) => [new Date(j, 9, 31)], // Reformationstag
   HH: (j) => [new Date(j, 9, 31)], // Reformationstag
-  HE: (j, o) => [addTage(o, 60)],  // Fronleichnam
-  MV: (j) => [new Date(j, 9, 31)], // Reformationstag
+  HE: (_j, o) => [addTage(o, 60)],  // Fronleichnam
+  MV: (j) => [
+    new Date(j, 9, 31),                                     // Reformationstag
+    ...(j >= 2023 ? [new Date(j, 2, 8)] : []),              // Internationaler Frauentag (seit 2023, § 2 Nr. 10 MV-FTG)
+  ],
   NI: (j) => [new Date(j, 9, 31)], // Reformationstag
   NW: (j, o) => [addTage(o, 60), new Date(j, 10, 1)], // Fronleichnam, Allerheiligen
   RP: (j, o) => [addTage(o, 60), new Date(j, 10, 1)], // Fronleichnam, Allerheiligen
   SL: (j, o) => [addTage(o, 60), new Date(j, 7, 15), new Date(j, 10, 1)],
-  SN: (j, o) => [addTage(o, 60), new Date(j, 9, 31), getBussUndBettag(j)], // Buß- und Bettag (dynamisch)
+  SN: (j) => [
+    new Date(j, 9, 31),                                     // Reformationstag
+    getBussUndBettag(j),                                    // Buß- und Bettag (dynamisch, § 5 Abs. 2 SächsSFG)
+    // Hinweis: Fronleichnam gilt in SN nur in bestimmten Gemeinden (kein landesweiter Feiertag)
+  ],
   ST: (j, o) => [new Date(j, 0, 6), addTage(o, 60), new Date(j, 9, 31)],
   SH: (j) => [new Date(j, 9, 31)],
-  TH: (j, o) => [
-    addTage(o, 60),                                         // Fronleichnam
+  TH: (j) => [
     ...(j >= 2019 ? [new Date(j, 8, 20)] : []),              // Weltkindertag (seit 2019, § 2 ThürFTG)
     new Date(j, 9, 31),                                     // Reformationstag
+    // Hinweis: Fronleichnam gilt in TH nur in bestimmten Gemeinden (kein landesweiter Feiertag)
   ],
 };
 
