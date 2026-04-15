@@ -2,11 +2,13 @@
  * search_law — 독일 연방법률 키워드 검색
  *
  * NeuRIS API를 1순위로 사용하고, 결과가 없으면 GII 목차에서 약어 매칭을 시도한다.
+ * Concept Map은 항상 상단에 표시되어 법률 개념 컨텍스트를 제공한다.
  */
 
 import { z } from "zod";
 import { searchLegislation } from "../lib/neuris-client.js";
 import { searchTocByAbbreviation } from "../lib/gii-client.js";
+import { searchConceptMap } from "../lib/concept-map.js";
 
 export const searchLawSchema = z.object({
   query: z.string().describe("검색어 (예: 'Kaufvertrag', 'Mietrecht', 'Datenschutz', 'BGB')"),
@@ -15,10 +17,26 @@ export const searchLawSchema = z.object({
 
 export type SearchLawInput = z.infer<typeof searchLawSchema>;
 
+function buildConceptSection(query: string): string[] {
+  const matches = searchConceptMap(query);
+  if (matches.length === 0) return [];
+  return [
+    "━━━ 법률 개념 사전 (Concept Map) ━━━",
+    "",
+    ...matches.slice(0, 5).map((m, i) =>
+      `${i + 1}. ${m.entry.norm} — ${m.entry.description}\n   분야: ${m.entry.category} | 매칭: "${m.matchedKeyword}" (${(m.score * 100).toFixed(0)}%)`
+    ),
+    "",
+  ];
+}
+
 export async function searchLaw(input: SearchLawInput): Promise<string> {
   const { query, size } = input;
 
   try {
+    // Concept Map은 항상 상단에 표시
+    const conceptSection = buildConceptSection(query);
+
     // 1차: NeuRIS 법령 검색
     const result = await searchLegislation(query, size);
 
@@ -27,6 +45,7 @@ export async function searchLaw(input: SearchLawInput): Promise<string> {
         `[VERIFIED — NeuRIS API] ${new Date().toISOString().slice(0, 10)}`,
         `[법령 검색결과: "${query}" — ${result.totalItems}건]`,
         "",
+        ...conceptSection,
       ];
 
       for (let i = 0; i < result.items.length; i++) {
@@ -64,6 +83,20 @@ export async function searchLaw(input: SearchLawInput): Promise<string> {
         `NeuRIS에서는 검색 결과가 없었으나 Gesetze im Internet에서 발견되었습니다.`,
         `get_law_section 도구로 구체적인 조문을 조회하세요.`,
       ].join("\n");
+    }
+
+    // 3차: Concept Map만 결과가 있는 경우
+    if (conceptSection.length > 0) {
+      const lines: string[] = [
+        `[법령 검색결과: "${query}" — NeuRIS/GII 결과 없음, 개념 매핑 결과]`,
+        "",
+        "NeuRIS 법령 검색과 GII 목차에서 결과를 찾지 못했습니다.",
+        "법률 개념 사전에서 다음 관련 조문을 찾았습니다:",
+        "",
+        ...conceptSection,
+        "💡 get_law_section 도구로 구체적인 조문을 조회하세요.",
+      ];
+      return lines.join("\n");
     }
 
     return `[법령 검색결과: "${query}" — 0건]\n\n검색 결과가 없습니다. 다른 키워드나 독일어 법률 용어로 검색해 보세요.`;
