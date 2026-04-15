@@ -37,7 +37,7 @@ const NORM_KONTEXT_DB: Record<string, NormKontext> = {
     typAnwendung: [
       "Gebrauchtwagenkauf mit versteckten Mängeln",
       "Online-Kauf defekter Elektronikartikel",
-      "Verbrauchsgüterkauf (§ 474 BGB — Beweislastumkehr!)",
+      "Verbrauchsgüterkauf (§ 477 BGB — Beweislastumkehr binnen 1 Jahr seit Gefahrübergang)",
     ],
     leitsatzSuche: "Sachmangel Kaufvertrag Gewährleistung",
     palandt: "§ 437 BGB ist die Verweisungsnorm — Ansprüche entstehen erst durch die jeweiligen Folgeparagrafen. Keine eigene Rechtsfolge.",
