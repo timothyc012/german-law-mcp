@@ -1,7 +1,7 @@
 {
   "name": "german-law-mcp",
-  "version": "0.1.0",
-  "description": "MCP server for German federal law — search and retrieve legislation and court decisions",
+  "version": "0.2.0",
+  "description": "MCP server for German law — legislation, case law, EUR-Lex EU law, amendments, delegation tracking",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "prepare": "tsc"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
