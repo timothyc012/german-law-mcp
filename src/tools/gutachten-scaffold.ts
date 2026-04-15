@@ -10,6 +10,7 @@
  */
 
 import { z } from "zod";
+import { searchConceptMap } from "../lib/concept-map.js";
 
 // ── Anspruchsgrundlagen-Wissensbasis ──────────────────────────────────────
 
@@ -191,15 +192,16 @@ function erkennerelevantNormen(sachverhalt: string, rechtsgebiet?: string): Ansp
   const sv = sachverhalt.toLowerCase();
 
   const treffer = ANSPRUCHSGRUNDLAGEN.filter((ag) => {
-    // Rechtsgebiet-Filter
+    // Stichwort-Matching
+    const stichwortMatch = ag.stichworte.some((sw) => sv.includes(sw.toLowerCase()));
+    // Rechtsgebiet-Filter: wenn angegeben, nur passende Anspruchsgrundlagen
     if (rechtsgebiet) {
       const rg = rechtsgebiet.toLowerCase();
-      if (!ag.bereich.toLowerCase().includes(rg) && !ag.norm.toLowerCase().includes(rg)) {
-        // Trotzdem weitermachen wenn Stichworte treffen
-      }
+      const bereichMatch = ag.bereich.toLowerCase().includes(rg) || ag.norm.toLowerCase().includes(rg);
+      if (!bereichMatch && !stichwortMatch) return false;
+      // Bereich-Match bevorzugen, aber Stichwort-Treffer nicht ausschließen
     }
-    // Stichwort-Matching
-    return ag.stichworte.some((sw) => sv.includes(sw.toLowerCase()));
+    return stichwortMatch;
   });
 
   // Deduplizieren, max 6 zurückgeben
@@ -284,6 +286,25 @@ function erzeugeGutachten(
         }
         lines.push("  └────────────────────────────────────────────────────────┘");
         lines.push("");
+
+        // Sachverhalt keyword hints
+        const hints = searchConceptMap(ag.norm + " " + ag.titel);
+        if (hints.length > 0) {
+          lines.push("  ┌─ SACHVERHALT-HINWEISE ───────────────────────────────┐");
+          lines.push("  │ Relevante Begriffe für die Subsumtion:               │");
+          const topHints = hints.slice(0, 4);
+          for (const h of topHints) {
+            const text = `${h.entry.norm}: "${h.matchedKeyword}" → ${h.entry.description}`;
+            const wrapped = text.match(/.{1,53}(\s|$)/g) ?? [text];
+            for (let w = 0; w < wrapped.length && w < 2; w++) {
+              lines.push(`  │ ${wrapped[w].trim().padEnd(53)}│`);
+            }
+          }
+          lines.push("  │                                                       │");
+          lines.push("  │ 💡 Diese Begriffe im Sachverhalt identifizieren!     │");
+          lines.push("  └────────────────────────────────────────────────────────┘");
+          lines.push("");
+        }
       }
 
       // ERGEBNIS

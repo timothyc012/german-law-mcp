@@ -209,6 +209,10 @@ const ANSPRUCHSMUSTER: AnspruchsMuster[] = [
 
 // ── Erkennungslogik ───────────────────────────────────────────────────────
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function erkenneRechtsgebiete(sachverhalt: string): Rechtsgebiet[] {
   const lower = sachverhalt.toLowerCase();
   const treffer: Array<{ gebiet: Rechtsgebiet; score: number }> = [];
@@ -216,7 +220,7 @@ function erkenneRechtsgebiete(sachverhalt: string): Rechtsgebiet[] {
   for (const gebiet of RECHTSGEBIETE) {
     let score = 0;
     for (const sw of gebiet.stichworte) {
-      if (lower.includes(sw)) score++;
+      if (new RegExp(`\\b${escapeRegex(sw)}\\b`).test(lower)) score++;
     }
     if (score > 0) treffer.push({ gebiet, score });
   }
@@ -234,7 +238,7 @@ function erkenneAnsprueche(sachverhalt: string): AnspruchsGrundlage[] {
   for (const muster of ANSPRUCHSMUSTER) {
     let score = 0;
     for (const sw of muster.stichworte) {
-      if (lower.includes(sw)) score++;
+      if (new RegExp(`\\b${escapeRegex(sw)}\\b`).test(lower)) score++;
     }
     if (score >= 2) {
       treffer.push({ anspruch: muster.anspruch, score });
@@ -365,9 +369,39 @@ export async function analyzeScenario(input: AnalyzeScenarioInput): Promise<stri
   }
 
   if (input.tiefe === "vollständig") {
+    // Beweislast-Analyse
+    lines.push("  ── [3] BEWEISLASTVERTEILUNG ─────────────────────────────");
+    lines.push("  Allgemeine Regel: Jede Partei beweist die Voraussetzungen");
+    lines.push("  der ihr günstigen Norm (§ 292 ZPO, Faustregel).");
+    lines.push("");
+
+    const lower = input.sachverhalt.toLowerCase();
+    const isVerbrauchsgutkauf = ["kauf", "verkauft", "händler", "online", "bestellt", "auto", "fahrzeug", "gekauft", "ware"].some(w => lower.includes(w))
+      && ["mangel", "defekt", "kaputt", "reparatur", "fehler", "funktioniert nicht"].some(w => lower.includes(w));
+
+    if (isVerbrauchsgutkauf) {
+      lines.push("  ⚡ BESONDERE BEWEISLASTVERTEILUNG (Verbrauchsgüterkauf):");
+      lines.push("  § 477 Abs. 1 BGB — Beweislastumkehr:");
+      lines.push("  Zeigt sich innerhalb von 1 Jahr (12 Monate) nach Ablieferung ein Sachmangel,");
+      lines.push("  wird vermutet, dass der Mangel bereits bei Gefahrübergang vorlag.");
+      lines.push("  → Der Verkäufer muss beweisen, dass der Mangel nicht beim Verkauf bestand.");
+      lines.push("  (Seit 01.01.2022 — vor 2022 waren es 6 Monate, nur noch für Tiere.)");
+      lines.push("");
+      lines.push("  Voraussetzungen der Umkehr:");
+      lines.push("  ✓ Verbraucher als Käufer (§ 13 BGB)");
+      lines.push("  ✓ Unternehmer als Verkäufer (§ 14 BGB)");
+      lines.push("  ✓ Mangel zeigt sich innerhalb 1 Jahr nach Ablieferung");
+      lines.push("  ✓ Kein Ausschluss (§ 477 Abs. 1 S. 2 — z.B. unsachgemäße Verwendung)");
+    } else {
+      lines.push("  Standardverteilung:");
+      lines.push("  → Kläger: Anspruchsvoraussetzungen (Tatbestandsmerkmale)");
+      lines.push("  → Beklagter: Einreden / Einwendungen (z.B. Verjährung, Erfüllung)");
+    }
+    lines.push("");
+
     // Verteidigungsargumente (bei beklagter Perspektive oder neutral)
     if (input.perspektive !== "kläger" && ansprueche.length > 0) {
-      lines.push("  ── [3] VERTEIDIGUNGSARGUMENTE ───────────────────────────");
+      lines.push("  ── [4] VERTEIDIGUNGSARGUMENTE ───────────────────────────");
       lines.push("  Typische Gegenargumente des Beklagten:");
       for (const a of ansprueche.slice(0, 2)) {
         for (const r of a.risiken) {
@@ -378,7 +412,7 @@ export async function analyzeScenario(input: AnalyzeScenarioInput): Promise<stri
     }
 
     // Beweismittel
-    lines.push("  ── [4] WICHTIGE BEWEISMITTEL ────────────────────────────");
+    lines.push("  ── [5] WICHTIGE BEWEISMITTEL ────────────────────────────");
     lines.push("  Allgemein relevante Dokumente:");
     lines.push("  → Verträge, Rechnungen, Quittungen (Beweisdokumente)");
     lines.push("  → Schriftverkehr (E-Mail, WhatsApp, Briefe)");
@@ -388,7 +422,7 @@ export async function analyzeScenario(input: AnalyzeScenarioInput): Promise<stri
     lines.push("");
 
     // Verfahrensweg
-    lines.push("  ── [5] EMPFOHLENER VERFAHRENSWEG ────────────────────────");
+    lines.push("  ── [6] EMPFOHLENER VERFAHRENSWEG ────────────────────────");
     lines.push(`  ${ermittleVerfahrensweg(rechtsgebiete)}`);
     lines.push("");
     lines.push("  Allgemeine Schritte:");
@@ -399,7 +433,7 @@ export async function analyzeScenario(input: AnalyzeScenarioInput): Promise<stri
     lines.push("");
 
     // Nächste Schritte
-    lines.push("  ── [6] NÄCHSTE SCHRITTE (MCP-Tools) ─────────────────────");
+    lines.push("  ── [7] NÄCHSTE SCHRITTE (MCP-Tools) ─────────────────────");
     if (rechtsgebiete.length > 0) {
       const erstesGesetz = rechtsgebiete[0].normen[0]?.match(/§§?\s*(\d+[a-z]?)\s+(\w+)/i);
       if (erstesGesetz) {
