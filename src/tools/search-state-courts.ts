@@ -247,9 +247,12 @@ export async function searchStateCourts(input: SearchStateCourtsInput): Promise<
 
     lines.push("  ═══════════════════════════════════════════════════════");
     lines.push("  HINWEIS:");
-    lines.push("  OLG-Urteile sind nicht revisibel — nur Tendenz/Orientierung.");
+    lines.push("  OLG-Urteile sind grundsätzlich revisibel (§ 542 ZPO),");
+    lines.push("  erfordern aber eine Zulassung der Revision (§ 543 ZPO):");
+    lines.push("    • grundsätzliche Bedeutung (§ 543 Abs. 2 Nr. 1 ZPO)");
+    lines.push("    • Fortbildung des Rechts / Sicherung einheitl. Rspr. (§ 543 Abs. 2 Nr. 2 ZPO)");
+    lines.push("  → Nur Orientierungshilfe — stets BGH-Rspr. gegenprüfen!");
     lines.push("  Für Bundesgericht-Entscheidungen: search_case_law verwenden.");
-    lines.push("  BGH hebt OLG-Urteile häufig ab — immer BGH-Rspr. prüfen!");
   } catch (err) {
     lines.push(`  ✗ Fehler: ${(err as Error).message}`);
     lines.push("");

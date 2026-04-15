@@ -6,9 +6,9 @@
  * 독일 연방법률 검색 및 조회를 위한 MCP 서버.
  * NeuRIS API + Gesetze im Internet을 데이터 소스로 사용한다.
  *
- * 도구 목록 (24개):
+ * 도구 목록 (25개):
  * ── 기본 검색 ──────────────────────────────────────────
- *  1. search_law          — 법률 키워드 검색 (GII)
+ *  1. search_law          — 법률 키워드 검색 (GII + Concept Map)
  *  2. get_law_section     — 특정 조문 전문 조회
  *  3. search_case_law     — 연방법원 판례 검색 (NeuRIS)
  *  4. get_case_text       — 판례 전문 조회
@@ -38,6 +38,8 @@
  * 23. get_state_law_section — 주법 조문 조회 (Bayern 실시간 파싱)
  * ── 사전 / 용어 (Phase 6) ──────────────────────────────
  * 24. lookup_legal_term    — 독일 법률 용어 사전 (40+ 용어, 한국어/영어)
+ * ── 리스크 알림 (Phase 7) ──────────────────────────────
+ * 25. risk_alert           — 사실관계 기반 리스크 조기 경고 (Verjährung/Frist/Kosten)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -83,15 +85,19 @@ import { getStateLawSectionSchema, getStateLawSectionTool } from "./tools/get-st
 import { getAmendmentHistorySchema, getAmendmentHistory } from "./tools/get-amendment-history.js";
 import { lookupLegalTermSchema, lookupLegalTerm } from "./tools/lookup-legal-term.js";
 
+// 리스크 알림 도구 (Phase 7)
+import { riskAlertSchema, riskAlert } from "./tools/risk-alert.js";
+
 const server = new McpServer({
   name: "german-law-mcp",
-  version: "0.6.0",
+  version: "0.7.0",
   description:
-    "German law MCP server — 24 tools covering federal legislation, court decisions, " +
+    "German law MCP server — 25 tools covering federal legislation, court decisions, " +
     "fee calculation, deadline computation, citation verification, amendment history, " +
     "legal analysis, German-EU law comparison (EUR-Lex live), delegation chain tracing, " +
     "source grading, cross-reference extraction, 14-gate quality validation, " +
-    "state law (Landesrecht) for all 16 German states, and legal dictionary (40+ terms). " +
+    "state law (Landesrecht) for all 16 German states, legal dictionary (40+ terms), " +
+    "and proactive risk alerts (Verjährung countdown, Frist warnings, cost estimation). " +
     "Data: NeuRIS (81,924 federal decisions) + gesetze-im-internet.de + " +
     "gesetze-bayern.de (live parsing) + openjur.de (state courts) + EUR-Lex CELLAR API.",
 });
@@ -495,6 +501,26 @@ server.registerTool(
   async (params) => {
     const input = lookupLegalTermSchema.parse(params);
     const result = await lookupLegalTerm(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+// ── [9] 리스크 알림 도구 (Phase 7) ──────────────────────────────────────────
+
+server.registerTool(
+  "risk_alert",
+  {
+    description:
+      "Proaktive Risiko-Warnungen für einen deutschen Rechtssachverhalt. " +
+      "Prüft: Verjährungs-Countdown (§ 195 BGB), Frist-Risiken " +
+      "(Kündigungsschutzklage 3 Wochen, etc.), Beweislastumkehr (§ 477 Abs. 1 BGB), " +
+      "Kostenausfallrisiko (RVG-Streitwert-Schätzung). " +
+      "Erkennt automatisch relevante Fristen und warnt vor drohendem Fristablauf.",
+    inputSchema: riskAlertSchema.shape,
+  },
+  async (params) => {
+    const input = riskAlertSchema.parse(params);
+    const result = await riskAlert(input);
     return { content: [{ type: "text", text: result }] };
   },
 );
