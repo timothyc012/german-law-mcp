@@ -138,3 +138,63 @@ LIMIT ${limit}
 export function buildEurLexUrl(celex: string, lang: "DE" | "EN" = "DE"): string {
   return `https://eur-lex.europa.eu/legal-content/${lang}/TXT/?uri=CELEX:${celex}`;
 }
+
+// ── search-eurlex / get-eurlex-document 호환 API ─────────────────────────
+
+/** search-eurlex.ts가 사용하는 래퍼 타입 */
+export interface EurLexSearchResult {
+  totalItems: number;
+  items: Array<EurLexDocument & { url: string }>;
+}
+
+/**
+ * searchEurLex를 EurLexSearchResult 형태로 래핑한다.
+ * search-eurlex.ts가 .totalItems / .items[].url 을 사용하므로 호환성을 위해 제공.
+ */
+export async function searchEurLexWithResult(
+  keyword: string,
+  limit = 10,
+): Promise<EurLexSearchResult> {
+  const docs = await searchEurLex(keyword, limit);
+  return {
+    totalItems: docs.length,
+    items: docs.map((d) => ({ ...d, url: d.uri })),
+  };
+}
+
+/** get-eurlex-document.ts가 사용하는 반환 타입 */
+export interface EurLexFullDocument {
+  celex: string;
+  title: string;
+  content: string;
+  url: string;
+  fetchedAt: string;
+}
+
+/**
+ * CELEX 번호로 EUR-Lex 문서의 독일어 HTML 본문을 가져온다.
+ */
+export async function getEurLexDocument(celex: string): Promise<EurLexFullDocument> {
+  const url = buildEurLexUrl(celex, "DE").replace("/TXT/", "/TXT/HTML/");
+
+  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+  if (!res.ok) {
+    throw new Error(`EUR-Lex document error: ${res.status} — CELEX: ${celex}`);
+  }
+
+  const html = await res.text();
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].replace(/\s+/g, " ").trim() : celex;
+
+  const content = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?(p|div|h[1-6]|section|article|table|tr|ul|ol|blockquote|li)[^>]*>/gi, "\n")
+    .replace(/<td[^>]*>/gi, " | ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&sect;/g, "§").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, "\n\n").replace(/[ \t]+/g, " ")
+    .trim();
+
+  return { celex, title, content, url, fetchedAt: new Date().toISOString() };
+}

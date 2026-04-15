@@ -191,7 +191,7 @@ const FRISTTYPEN: Record<string, FristDef> = {
   },
   widerspruch_mahnbescheid: {
     bezeichnung: "Widerspruchsfrist (Mahnbescheid)",
-    gesetz: "§ 692 Abs. 1 Nr. 3 ZPO",
+    gesetz: "§ 694 Abs. 1 ZPO",
     laenge: { einheit: "wochen", wert: 2 },
     beschreibung: "Widerspruch gegen den Mahnbescheid muss innerhalb von 2 Wochen nach Zustellung eingelegt werden.",
     berechnung: "ab_zustellung",

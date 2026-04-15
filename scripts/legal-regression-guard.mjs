@@ -58,7 +58,7 @@ const ASSERTIONS = [
   // ── Fristen 상세 ──
   { file: "src/tools/calculate-frist.ts", mustContain: ["kuendigung_mietvertrag_vermieter"], desc: "Vermieter Kündigungsfrist 타입 존재", severity: "high" },
   { file: "src/tools/calculate-frist.ts", mustContain: ["3 Monate", "6 Monate", "9 Monate"], desc: "§ 573c Abs. 1 S. 2 BGB gestaffelte Fristen 3/6/9 Monate", severity: "high" },
-  { file: "src/tools/calculate-frist.ts", mustContain: ["§ 692 Abs. 1 Nr. 3 ZPO"], desc: "Mahnbescheid Widerspruchsfrist 법적 근거", severity: "high" },
+  { file: "src/tools/calculate-frist.ts", mustContain: ["§ 694 Abs. 1 ZPO"], desc: "Mahnbescheid Widerspruchsfrist 법적 근거 (§ 692 = Inhalt, § 694 = Widerspruch)", severity: "high" },
   { file: "src/tools/calculate-frist.ts", mustContain: ["§ 544 Abs. 3 ZPO"], desc: "Nichtzulassungsbeschwerde 법적 근거", severity: "high" },
   { file: "src/tools/calculate-frist.ts", mustContain: ["§ 276 Abs. 1 ZPO"], desc: "Klageerwiderungsfrist 법적 근거", severity: "high" },
   { file: "src/tools/calculate-frist.ts", mustContain: ["§ 568 BGB"], desc: "Schriftform Kündigungserfordernis (§ 568 BGB)", severity: "high" },
@@ -120,7 +120,7 @@ const ASSERTIONS = [
   { file: "src/tools/calculate-frist.ts", mustContain: ["BW:", "BY:", "BE:", "BB:", "HB:", "HH:", "HE:", "MV:", "NI:", "NW:", "RP:", "SL:", "SN:", "ST:", "SH:", "TH:"], desc: "16 Bundesländer 전수 존재", severity: "medium" },
 
   // ── Bundesweite Feiertage ──
-  { file: "src/tools/calculate-frist.ts", mustContain: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit"], desc: "9 bundesweite Feiertage 주석 존재", severity: "medium" },
+  { file: "src/tools/calculate-frist.ts", mustContain: ["Neujahr", "Karfreitag", "Ostermontag", "Tag der Arbeit", "Christi Himmelfahrt", "Pfingstmontag", "Tag der Deutschen Einheit", "1. Weihnachtstag", "2. Weihnachtstag"], desc: "9 bundesweite Feiertage 주석 존재 (inkl. Weihnachten)", severity: "medium" },
 
   // ── Ab_werktag Verschiebung ──
   { file: "src/tools/calculate-frist.ts", mustContain: ["§ 193 BGB", "§ 222 Abs. 2 ZPO"], desc: "Fristverschiebung 법적 근거 표시", severity: "medium" },
