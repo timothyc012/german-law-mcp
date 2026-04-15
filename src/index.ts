@@ -6,7 +6,7 @@
  * 독일 연방법률 검색 및 조회를 위한 MCP 서버.
  * NeuRIS API + Gesetze im Internet을 데이터 소스로 사용한다.
  *
- * 도구 목록 (21개):
+ * 도구 목록 (22개):
  * ── 기본 검색 ──────────────────────────────────────────
  *  1. search_law          — 법률 키워드 검색 (GII)
  *  2. get_law_section     — 특정 조문 전문 조회
@@ -91,10 +91,14 @@ const server = new McpServer({
 
 // ── [1] 기본 검색 도구 ─────────────────────────────────────────────────────
 
-server.tool(
+server.registerTool(
   "search_law",
-  "Search German federal legislation by keyword. Returns matching laws with relevant text excerpts. Use German legal terms for best results (e.g., 'Kaufvertrag', 'Mietrecht', 'Datenschutz', 'BGB').",
-  searchLawSchema.shape,
+  {
+    description:
+      "Search German federal legislation by keyword. Returns matching laws with relevant text excerpts. " +
+      "Use German legal terms for best results (e.g., 'Kaufvertrag', 'Mietrecht', 'Datenschutz', 'BGB').",
+    inputSchema: searchLawSchema.shape,
+  },
   async (params) => {
     const input = searchLawSchema.parse(params);
     const result = await searchLaw(input);
@@ -102,10 +106,15 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "get_law_section",
-  "Retrieve a specific section (§) of a German law. Provide the law abbreviation (e.g., 'BGB', 'StGB', 'GG') and section number (e.g., '437', '823'). Returns the full text of that section.",
-  getLawSectionSchema.shape,
+  {
+    description:
+      "Retrieve a specific section (§) of a German law. " +
+      "Provide the law abbreviation (e.g., 'BGB', 'StGB', 'GG') and section number (e.g., '437', '823'). " +
+      "Returns the full text of that section.",
+    inputSchema: getLawSectionSchema.shape,
+  },
   async (params) => {
     const input = getLawSectionSchema.parse(params);
     const result = await getLawSection(input);
@@ -113,10 +122,14 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "search_case_law",
-  "Search German federal court decisions. Covers all 7 federal courts: BGH, BVerfG, BVerwG, BFH, BAG, BSG, BPatG (81,924 decisions total). Optionally filter by court.",
-  searchCaseLawSchema.shape,
+  {
+    description:
+      "Search German federal court decisions. Covers all 7 federal courts: " +
+      "BGH, BVerfG, BVerwG, BFH, BAG, BSG, BPatG (81,924 decisions total). Optionally filter by court.",
+    inputSchema: searchCaseLawSchema.shape,
+  },
   async (params) => {
     const input = searchCaseLawSchema.parse(params);
     const result = await searchCaseLawTool(input);
@@ -124,10 +137,14 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "get_case_text",
-  "Retrieve the full text of a court decision by its document number (e.g., 'JURE120015069'). Use search_case_law first to find the document number.",
-  getCaseTextSchema.shape,
+  {
+    description:
+      "Retrieve the full text of a court decision by its document number (e.g., 'JURE120015069'). " +
+      "Use search_case_law first to find the document number.",
+    inputSchema: getCaseTextSchema.shape,
+  },
   async (params) => {
     const input = getCaseTextSchema.parse(params);
     const result = await getCaseText(input);
@@ -135,10 +152,14 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "search_all",
-  "Unified search across both legislation and court decisions simultaneously. Useful when the topic is broad or you want to find both laws and related case law at once.",
-  searchAllSchema.shape,
+  {
+    description:
+      "Unified search across both legislation and court decisions simultaneously. " +
+      "Useful when the topic is broad or you want to find both laws and related case law at once.",
+    inputSchema: searchAllSchema.shape,
+  },
   async (params) => {
     const input = searchAllSchema.parse(params);
     const result = await searchAllTool(input);
@@ -148,11 +169,14 @@ server.tool(
 
 // ── [2] 실무 계산 도구 ─────────────────────────────────────────────────────
 
-server.tool(
+server.registerTool(
   "calculate_rvg",
-  "Berechnet Rechtsanwaltsgebühren nach dem RVG (Rechtsanwaltsvergütungsgesetz). " +
-  "Gibt Gebührenrahmen, konkrete Beträge und Mehrwertsteuer für den angegebenen Streitwert aus.",
-  calculateRvgSchema.shape,
+  {
+    description:
+      "Berechnet Rechtsanwaltsgebühren nach dem RVG (Rechtsanwaltsvergütungsgesetz). " +
+      "Gibt Gebührenrahmen, konkrete Beträge und Mehrwertsteuer für den angegebenen Streitwert aus.",
+    inputSchema: calculateRvgSchema.shape,
+  },
   async (params) => {
     const input = calculateRvgSchema.parse(params);
     const result = await calculateRvg(input);
@@ -160,11 +184,14 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "calculate_frist",
-  "Berechnet Prozessfristen nach der ZPO (Zivilprozessordnung). " +
-  "Berücksichtigt Fristtyp (Tage/Wochen/Monate), Sonn-/Feiertage und § 222 ZPO i.V.m. § 193 BGB.",
-  calculateFristSchema.shape,
+  {
+    description:
+      "Berechnet Prozessfristen nach der ZPO (Zivilprozessordnung). " +
+      "Berücksichtigt Fristtyp (Tage/Wochen/Monate), Sonn-/Feiertage und § 222 ZPO i.V.m. § 193 BGB.",
+    inputSchema: calculateFristSchema.shape,
+  },
   async (params) => {
     const input = calculateFristSchema.parse(params);
     const result = await calculateFrist(input);
@@ -174,12 +201,15 @@ server.tool(
 
 // ── [3] 검증 / 이력 도구 ──────────────────────────────────────────────────
 
-server.tool(
+server.registerTool(
   "verify_citation",
-  "Prüft deutsche Rechtsprechungszitate auf Existenz (Halluzinationsschutz). " +
-  "Unterstützt: Aktenzeichen (BGH IX ZR 123/22), Zeitschriften (BGH NJW 2023, 1234), " +
-  "Amtliche Sammlungen (BGHZ 150, 248), BeckRS, NeuRIS-Dokumentnummern (JURE...).",
-  verifyCitationSchema.shape,
+  {
+    description:
+      "Prüft deutsche Rechtsprechungszitate auf Existenz (Halluzinationsschutz). " +
+      "Unterstützt: Aktenzeichen (BGH IX ZR 123/22), Zeitschriften (BGH NJW 2023, 1234), " +
+      "Amtliche Sammlungen (BGHZ 150, 248), BeckRS, NeuRIS-Dokumentnummern (JURE...).",
+    inputSchema: verifyCitationSchema.shape,
+  },
   async (params) => {
     const input = verifyCitationSchema.parse(params);
     const result = await verifyCitation(input);
@@ -187,12 +217,15 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "get_norm_version",
-  "Ruft den historischen Stand eines deutschen Gesetzes zu einem Stichtag ab. " +
-  "Nutzt gesetze-im-internet.de (aktuell) + Wayback Machine (historisch). " +
-  "Beispiel: '§ 13 TMG am 24.05.2018', '§ 312d BGB vor 2014'.",
-  getNormVersionSchema.shape,
+  {
+    description:
+      "Ruft den historischen Stand eines deutschen Gesetzes zu einem Stichtag ab. " +
+      "Nutzt gesetze-im-internet.de (aktuell) + Wayback Machine (historisch). " +
+      "Beispiel: '§ 13 TMG am 24.05.2018', '§ 312d BGB vor 2014'.",
+    inputSchema: getNormVersionSchema.shape,
+  },
   async (params) => {
     const input = getNormVersionSchema.parse(params);
     const result = await getNormVersion(input);
@@ -202,12 +235,15 @@ server.tool(
 
 // ── [4] 심층 분석 도구 (Phase 2) ──────────────────────────────────────────
 
-server.tool(
+server.registerTool(
   "gutachten_scaffold",
-  "Erstellt ein vollständiges Rechtsgutachten-Gerüst im Gutachtenstil (deutsche juristische Methodik). " +
-  "Eingabe: Sachverhalt + Rechtsfrage. Ausgabe: strukturiertes Gerüst mit Obersatz, Voraussetzungen, " +
-  "Subsumtion und Ergebnis je Anspruchsgrundlage — bereit zur Ausfüllung.",
-  gutachtenScaffoldSchema.shape,
+  {
+    description:
+      "Erstellt ein vollständiges Rechtsgutachten-Gerüst im Gutachtenstil (deutsche juristische Methodik). " +
+      "Eingabe: Sachverhalt + Rechtsfrage. Ausgabe: strukturiertes Gerüst mit Obersatz, Voraussetzungen, " +
+      "Subsumtion und Ergebnis je Anspruchsgrundlage — bereit zur Ausfüllung.",
+    inputSchema: gutachtenScaffoldSchema.shape,
+  },
   async (params) => {
     const input = gutachtenScaffoldSchema.parse(params);
     const result = await gutachtenScaffold(input);
@@ -215,12 +251,15 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "spot_issues",
-  "Analysiert einen deutschen Rechtssachverhalt und identifiziert juristische Kernprobleme. " +
-  "Erkennt Rechtsgebiete, benennt Anspruchsgrundlagen, priorisiert nach Relevanz und zeigt " +
-  "kritische Fristen + Verjährungsrisiken. Ideal als erster Schritt vor gutachten_scaffold.",
-  spotIssuesSchema.shape,
+  {
+    description:
+      "Analysiert einen deutschen Rechtssachverhalt und identifiziert juristische Kernprobleme. " +
+      "Erkennt Rechtsgebiete, benennt Anspruchsgrundlagen, priorisiert nach Relevanz und zeigt " +
+      "kritische Fristen + Verjährungsrisiken. Ideal als erster Schritt vor gutachten_scaffold.",
+    inputSchema: spotIssuesSchema.shape,
+  },
   async (params) => {
     const input = spotIssuesSchema.parse(params);
     const result = await spotIssues(input);
@@ -228,12 +267,15 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "analyze_case",
-  "Tiefenanalyse eines BGH/BVerfG-Urteils aus NeuRIS. Extrahiert Leitsätze, Tenor, " +
-  "Normenkette, Entscheidungsgründe-Auszug und bewertet die Praxisrelevanz. " +
-  "Sucht optional ähnliche Urteile. Eingabe: NeuRIS-Dokumentnummer (aus search_case_law).",
-  analyzeCaseSchema.shape,
+  {
+    description:
+      "Tiefenanalyse eines BGH/BVerfG-Urteils aus NeuRIS. Extrahiert Leitsätze, Tenor, " +
+      "Normenkette, Entscheidungsgründe-Auszug und bewertet die Praxisrelevanz. " +
+      "Sucht optional ähnliche Urteile. Eingabe: NeuRIS-Dokumentnummer (aus search_case_law).",
+    inputSchema: analyzeCaseSchema.shape,
+  },
   async (params) => {
     const input = analyzeCaseSchema.parse(params);
     const result = await analyzeCase(input);
@@ -241,13 +283,16 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "get_norm_context",
-  "Gibt den vollständigen Normenkontext eines deutschen Paragraphen zurück: " +
-  "aktueller Normtext, benachbarte Paragraphen, verwandte Normen, typische Anwendungsfälle, " +
-  "Kommentar-Hinweise und BGH-Leitentscheidungen. " +
-  "Beispiel: get_norm_context({ gesetz: 'BGB', paragraph: '437' })",
-  getNormContextSchema.shape,
+  {
+    description:
+      "Gibt den vollständigen Normenkontext eines deutschen Paragraphen zurück: " +
+      "aktueller Normtext, benachbarte Paragraphen, verwandte Normen, typische Anwendungsfälle, " +
+      "Kommentar-Hinweise und BGH-Leitentscheidungen. " +
+      "Beispiel: get_norm_context({ gesetz: 'BGB', paragraph: '437' })",
+    inputSchema: getNormContextSchema.shape,
+  },
   async (params) => {
     const input = getNormContextSchema.parse(params);
     const result = await getNormContext(input);
@@ -257,12 +302,15 @@ server.tool(
 
 // ── [5] 확장 도구 (Phase 3) ───────────────────────────────────────────────
 
-server.tool(
+server.registerTool(
   "search_state_courts",
-  "Durchsucht OLG- und LG-Urteile über openjur.de — Deutschlands größte freie Urteilsdatenbank. " +
-  "Ergänzt search_case_law (Bundesgerichte) um Berufungs- und Erstinstanzentscheidungen. " +
-  "Filterbar nach Gericht, Zeitraum und Instanz.",
-  searchStateCourtsSchema.shape,
+  {
+    description:
+      "Durchsucht OLG- und LG-Urteile über openjur.de — Deutschlands größte freie Urteilsdatenbank. " +
+      "Ergänzt search_case_law (Bundesgerichte) um Berufungs- und Erstinstanzentscheidungen. " +
+      "Filterbar nach Gericht, Zeitraum und Instanz.",
+    inputSchema: searchStateCourtsSchema.shape,
+  },
   async (params) => {
     const input = searchStateCourtsSchema.parse(params);
     const result = await searchStateCourts(input);
@@ -270,13 +318,16 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "analyze_scenario",
-  "Analysiert einen deutschen Rechtssachverhalt und ermittelt systematisch: " +
-  "Rechtsgebiete, Anspruchsgrundlagen mit Erfolgschancen-Ampel, Verteidigungsargumente, " +
-  "Beweismittel und empfohlenen Verfahrensweg. " +
-  "Perspektive wählbar: Kläger / Beklagter / neutral. Kein Rechtsrat — Orientierungshilfe.",
-  analyzeScenarioSchema.shape,
+  {
+    description:
+      "Analysiert einen deutschen Rechtssachverhalt und ermittelt systematisch: " +
+      "Rechtsgebiete, Anspruchsgrundlagen mit Erfolgschancen-Ampel, Verteidigungsargumente, " +
+      "Beweismittel und empfohlenen Verfahrensweg. " +
+      "Perspektive wählbar: Kläger / Beklagter / neutral. Kein Rechtsrat — Orientierungshilfe.",
+    inputSchema: analyzeScenarioSchema.shape,
+  },
   async (params) => {
     const input = analyzeScenarioSchema.parse(params);
     const result = await analyzeScenario(input);
@@ -284,13 +335,16 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "compare_de_eu",
-  "Vergleicht deutsches Recht mit EU-Recht zu einem Thema. " +
-  "Zeigt: EU-Rechtsakt, deutsche Umsetzungsnorm, Abweichungen, Anwendungsvorrang, " +
-  "EuGH-Leitentscheidungen und praktische Konsequenzen. " +
-  "Themen: Datenschutz, Kaufrecht, Arbeitszeit, Produkthaftung, Kartellrecht.",
-  compareDeEuSchema.shape,
+  {
+    description:
+      "Vergleicht deutsches Recht mit EU-Recht zu einem Thema. " +
+      "Zeigt: EU-Rechtsakt, deutsche Umsetzungsnorm, Abweichungen, Anwendungsvorrang, " +
+      "EuGH-Leitentscheidungen und praktische Konsequenzen. " +
+      "Themen: Datenschutz, Kaufrecht, Arbeitszeit, Produkthaftung, Kartellrecht.",
+    inputSchema: compareDeEuSchema.shape,
+  },
   async (params) => {
     const input = compareDeEuSchema.parse(params);
     const result = await compareDeEu(input);
@@ -300,11 +354,14 @@ server.tool(
 
 // ── [6] 품질 / 고급 분석 도구 (Phase 4) ──────────────────────────────────
 
-server.tool(
+server.registerTool(
   "get_delegation_chain",
-  "독일법 3단계 위임 체계 추적. 법률(Gesetz) → 시행령(Rechtsverordnung) → 행정규칙(Verwaltungsvorschrift) 구조를 반환. " +
-  "특정 조문의 위임 조항(Ermächtigungsnorm) 감지 포함. 지원 법률: BDSG, KWG, EStG, UStG, AO, UWG, GmbHG, AktG 등.",
-  getDelegationChainSchema.shape,
+  {
+    description:
+      "독일법 3단계 위임 체계 추적. 법률(Gesetz) → 시행령(Rechtsverordnung) → 행정규칙(Verwaltungsvorschrift) 구조를 반환. " +
+      "특정 조문의 위임 조항(Ermächtigungsnorm) 감지 포함. 지원 법률: BDSG, KWG, EStG, UStG, AO, UWG, GmbHG, AktG 등.",
+    inputSchema: getDelegationChainSchema.shape,
+  },
   async (params) => {
     const input = getDelegationChainSchema.parse(params);
     const result = await getDelegationChain(input);
@@ -312,13 +369,16 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "search_with_grade",
-  "Search German legislation and case law with source reliability grades (A–D). " +
-  "Grade A: federal legislation (BGBl). Grade B: federal court decisions (BGH/BVerfG). " +
-  "Grade C: state court decisions. Grade D: administrative guidelines. " +
-  "Filter results by minimum grade. Searches legislation + case law in parallel.",
-  searchWithGradeSchema.shape,
+  {
+    description:
+      "Search German legislation and case law with source reliability grades (A–D). " +
+      "Grade A: federal legislation (BGBl). Grade B: federal court decisions (BGH/BVerfG). " +
+      "Grade C: state court decisions. Grade D: administrative guidelines. " +
+      "Filter results by minimum grade. Searches legislation + case law in parallel.",
+    inputSchema: searchWithGradeSchema.shape,
+  },
   async (params) => {
     const input = searchWithGradeSchema.parse(params);
     const result = await searchWithGrade(input);
@@ -326,12 +386,15 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "extract_cross_refs",
-  "교차참조 추출: 독일 법령 조문에서 다른 법률·조항·EU법령 참조를 자동 추출. " +
-  "타입별 분류: 동일 법률 내(internal), 타 법률(external), EU 규정/지침(eu), 기본법(grundgesetz). " +
-  "결과에 참조 맥락(context) 포함. 법령 연구 및 의존성 분석에 활용.",
-  extractCrossRefsSchema.shape,
+  {
+    description:
+      "교차참조 추출: 독일 법령 조문에서 다른 법률·조항·EU법령 참조를 자동 추출. " +
+      "타입별 분류: 동일 법률 내(internal), 타 법률(external), EU 규정/지침(eu), 기본법(grundgesetz). " +
+      "결과에 참조 맥락(context) 포함. 법령 연구 및 의존성 분석에 활용.",
+    inputSchema: extractCrossRefsSchema.shape,
+  },
   async (params) => {
     const input = extractCrossRefsSchema.parse(params);
     const result = await extractCrossRefs(input);
@@ -339,14 +402,17 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "quality_gate",
-  "14-gate legal analysis quality validator for German law. " +
-  "Categories: A) Source reliability (gates 1-3), B) Legislative completeness (4-7), " +
-  "C) Temporal validity (8-10), D) Cross-reference consistency (11-12), " +
-  "E) Practical applicability (13-14). " +
-  "Returns pass/fail per gate with recommendations. Strict mode available.",
-  qualityGateSchema.shape,
+  {
+    description:
+      "14-gate legal analysis quality validator for German law. " +
+      "Categories: A) Source reliability (gates 1-3), B) Legislative completeness (4-7), " +
+      "C) Temporal validity (8-10), D) Cross-reference consistency (11-12), " +
+      "E) Practical applicability (13-14). " +
+      "Returns pass/fail per gate with recommendations. Strict mode available.",
+    inputSchema: qualityGateSchema.shape,
+  },
   async (params) => {
     const input = qualityGateSchema.parse(params);
     const result = await qualityGate(input);
@@ -356,14 +422,17 @@ server.tool(
 
 // ── [7] 주법 도구 (Phase 5) ────────────────────────────────────────────────
 
-server.tool(
+server.registerTool(
   "search_state_law",
-  "독일 주법(Landesrecht) 검색 — 16개 주의 주요 법령을 약어·분야·주코드로 검색. " +
-  "지원 분야: police(경찰), building(건축), data(데이터보호), education(교육), " +
-  "local(지방자치), press(언론), environ(환경), transport(교통), admin(행정절차). " +
-  "지원 주: BY(Bayern), BE(Berlin), HH(Hamburg), HE(Hessen), BW(Baden-Württemberg), " +
-  "NW(NRW), NI(Niedersachsen), SN(Sachsen) 외 8개 주.",
-  searchStateLawSchema.shape,
+  {
+    description:
+      "독일 주법(Landesrecht) 검색 — 16개 주의 주요 법령을 약어·분야·주코드로 검색. " +
+      "지원 분야: police(경찰), building(건축), data(데이터보호), education(교육), " +
+      "local(지방자치), press(언론), environ(환경), transport(교통), admin(행정절차). " +
+      "지원 주: BY(Bayern), BE(Berlin), HH(Hamburg), HE(Hessen), BW(Baden-Württemberg), " +
+      "NW(NRW), NI(Niedersachsen), SN(Sachsen) 외 8개 주.",
+    inputSchema: searchStateLawSchema.shape,
+  },
   async (params) => {
     const input = searchStateLawSchema.parse(params);
     const result = await searchStateLaw(input);
@@ -371,13 +440,16 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "get_state_law_section",
-  "독일 주법 조문 조회. Bayern(BY)는 gesetze-bayern.de에서 실시간 HTML 파싱으로 " +
-  "조문 원문을 직접 반환. 그 외 주는 법령 정보와 포털 직접 접근 URL을 반환. " +
-  "Bayern 예: state='BY', law='BayBO', section='13' → 건축허가 조문 원문. " +
-  "Berlin 예: state='BE', law='ASOG' → 베를린 경찰법 URL 안내.",
-  getStateLawSectionSchema.shape,
+  {
+    description:
+      "독일 주법 조문 조회. Bayern(BY)는 gesetze-bayern.de에서 실시간 HTML 파싱으로 " +
+      "조문 원문을 직접 반환. 그 외 주는 법령 정보와 포털 직접 접근 URL을 반환. " +
+      "Bayern 예: state='BY', law='BayBO', section='13' → 건축허가 조문 원문. " +
+      "Berlin 예: state='BE', law='ASOG' → 베를린 경찰법 URL 안내.",
+    inputSchema: getStateLawSectionSchema.shape,
+  },
   async (params) => {
     const input = getStateLawSectionSchema.parse(params);
     const result = await getStateLawSectionTool(input);
