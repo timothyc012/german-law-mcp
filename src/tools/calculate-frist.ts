@@ -40,6 +40,18 @@ function addTage(d: Date, tage: number): Date {
   return r;
 }
 
+// Buß- und Bettag: Mittwoch vor dem letzten Sonntag des Kirchenjahres
+// = 11 Tage vor dem 1. Advent (1. Advent = 4. Sonntag vor 25.12.)
+function getBussUndBettag(jahr: number): Date {
+  // 1. Advent = erster Sonntag am oder nach 27. November
+  const nov27 = new Date(jahr, 10, 27); // Nov 27
+  const dow = nov27.getDay(); // 0=Sonntag
+  const daysToSunday = dow === 0 ? 0 : 7 - dow;
+  const ersterAdvent = new Date(jahr, 10, 27 + daysToSunday);
+  // Buß- und Bettag = 11 Tage vor dem 1. Advent (Mittwoch)
+  return addTage(ersterAdvent, -11);
+}
+
 // Bundesweite Feiertage (alle Länder)
 function getBundesweiteFeiertageDates(jahr: number): Date[] {
   const ostern = getOstersonntag(jahr);
@@ -68,10 +80,13 @@ const LANDES_FEIERTAGE: Record<string, (jahr: number, ostern: Date) => Date[]> =
     addTage(o, 60),              // Fronleichnam
     new Date(j, 7, 15),          // Mariä Himmelfahrt
     new Date(j, 10, 1),          // Allerheiligen
-    new Date(j, 11, 24),         // (kein Feiertag aber Sonderregelung Schulen)
   ],
-  BE: () => [new Date(0, 0, 1)], // Berlin: kein Landesfeiertag (Reformationstag 2017+)
-  BB: (j, o) => [addTage(o, 60), new Date(j, 9, 31)], // Fronleichnam, Reformationstag
+  BE: (j) => j >= 2019 ? [new Date(j, 2, 8)] : [], // Internationaler Frauentag (seit 2019)
+  BB: (j, o) => [
+    addTage(o, 60),                                         // Fronleichnam
+    new Date(j, 9, 31),                                     // Reformationstag
+    ...(j >= 2024 ? [new Date(j, 2, 8)] : []),              // Internationaler Frauentag (seit 2024, § 1 Abs. 2 Nr. 10 BbgFTG)
+  ],
   HB: (j) => [new Date(j, 9, 31)], // Reformationstag
   HH: (j) => [new Date(j, 9, 31)], // Reformationstag
   HE: (j, o) => [addTage(o, 60)],  // Fronleichnam
@@ -80,10 +95,14 @@ const LANDES_FEIERTAGE: Record<string, (jahr: number, ostern: Date) => Date[]> =
   NW: (j, o) => [addTage(o, 60), new Date(j, 10, 1)], // Fronleichnam, Allerheiligen
   RP: (j, o) => [addTage(o, 60), new Date(j, 10, 1)], // Fronleichnam, Allerheiligen
   SL: (j, o) => [addTage(o, 60), new Date(j, 7, 15), new Date(j, 10, 1)],
-  SN: (j, o) => [addTage(o, 60), new Date(j, 9, 31), new Date(j, 10, 17)], // Buß- und Bettag
+  SN: (j, o) => [addTage(o, 60), new Date(j, 9, 31), getBussUndBettag(j)], // Buß- und Bettag (dynamisch)
   ST: (j, o) => [new Date(j, 0, 6), addTage(o, 60), new Date(j, 9, 31)],
   SH: (j) => [new Date(j, 9, 31)],
-  TH: (j, o) => [addTage(o, 60), new Date(j, 8, 20), new Date(j, 9, 31)], // Weltkindertag, Reformationstag
+  TH: (j, o) => [
+    addTage(o, 60),                                         // Fronleichnam
+    ...(j >= 2019 ? [new Date(j, 8, 20)] : []),              // Weltkindertag (seit 2019, § 2 ThürFTG)
+    new Date(j, 9, 31),                                     // Reformationstag
+  ],
 };
 
 function getFeiertageDates(jahr: number, bundesland: string): Set<string> {
@@ -274,9 +293,17 @@ const FRISTTYPEN: Record<string, FristDef> = {
     bezeichnung: "Kündigungsfrist Mietvertrag (Mieter)",
     gesetz: "§ 573c Abs. 1 BGB",
     laenge: { einheit: "monate", wert: 3 },
-    beschreibung: "Ordentliche Kündigung durch den Mieter: 3 Monate zum Monatsende (bzw. zum 3. Werktag eines Monats für das Monatsende übernächsten Monats).",
+    beschreibung: "Ordentliche Kündigung durch den Mieter: 3 Monate zum Monatsende.",
     berechnung: "ab_ereignis",
     fristwahrung_hinweis: "Kündigung muss bis zum 3. Werktag eines Monats zugehen für Wirksamkeit zum Monatsende des übernächsten Monats.",
+  },
+  kuendigung_mietvertrag_vermieter: {
+    bezeichnung: "Kündigungsfrist Mietvertrag (Vermieter)",
+    gesetz: "§ 573c Abs. 1 BGB",
+    laenge: { einheit: "monate", wert: 3 },
+    beschreibung: "Ordentliche Kündigung durch den Vermieter — gestaffelte Fristen nach Mietdauer: bis 5 Jahre = 3 Monate, 5–8 Jahre = 6 Monate, ab 8 Jahre = 9 Monate (jeweils zum Ablauf des übernächsten Monats).",
+    berechnung: "ab_ereignis",
+    fristwahrung_hinweis: "§ 573c Abs. 1 S. 2 BGB: Frist verlängert sich nach 5 und 8 Jahren Vermietungsdauer um jeweils 3 Monate. Kündigungserfordernis: Schriftform (§ 568 BGB) und Begründung (§ 573 Abs. 3 BGB).",
   },
 };
 
@@ -316,7 +343,7 @@ export const calculateFristSchema = z.object({
       "berufung_strafrecht", "revision_strafrecht",
       "widerspruch_verwaltungsakt", "anfechtungsklage_vg",
       "gewaehrleistung_kauf", "verjährung_allgemein",
-      "kuendigung_mietvertrag_mieter",
+      "kuendigung_mietvertrag_mieter", "kuendigung_mietvertrag_vermieter",
     ])
     .describe("Art der zu berechnenden Frist"),
   ereignisdatum: z
