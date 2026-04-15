@@ -87,7 +87,7 @@ const ASSERTIONS = [
 
   // ── TMG→DDG 대체 안내 ──
   { file: "src/tools/quality-gate.ts", mustContain: ["DDG"], desc: "DDG (Digitale-Dienste-Gesetz) 알려진 법률 목록에 존재", severity: "high" },
-  { file: "src/tools/quality-gate.ts", mustContain: ["2024.05.14", "TMG 폐지"], desc: "TMG→DDG 2024 폐지 안내 존재", severity: "high" },
+  { file: "src/tools/quality-gate.ts", mustContain: ["2024-05-14", "DDG"], desc: "TMG→DDG 2024 대체 안내 존재 (Digitale-Dienste-Gesetz)", severity: "high" },
 
   // ═══════════════════════════════════════════════════════════
   // MEDIUM — 경고 수준, 자동커밋 가능하나 메모 남김
