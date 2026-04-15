@@ -4,18 +4,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 독일 연방법률 검색·분석을 위한 **Model Context Protocol (MCP) 서버**.  
-22개 도구로 법령 조문, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교, 위임체계 추적, 교차참조 추출, 품질 검증, 주법(Landesrecht)까지 커버합니다.
+24개 도구로 법령 조문, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교(EUR-Lex 실시간), 위임체계 추적, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전까지 커버합니다.
 
 ## 데이터 소스
 
 | 소스 | 내용 | 무료 |
 |------|------|------|
 | [NeuRIS](https://www.recht.bund.de) | 연방법원 판례 81,924건 (BGH, BVerfG, BVerwG, BFH, BAG, BSG, BPatG) | ✅ |
-| [gesetze-im-internet.de](https://www.gesetze-im-internet.de) | 독일 연방법률 전문 (BGB, StGB, ZPO 등 6,000+ 법령) | ✅ |
+| [gesetze-im-internet.de](https://www.gesetze-im-internet.de) | 독일 연방법률 전문 (BGB, StGB, ZPO 등 6,000+ 법령) + 개정 이력 | ✅ |
 | [openjur.de](https://openjur.de) | OLG·LG·AG 판례 (주 법원, 200만+ 건) | ✅ |
+| [EUR-Lex CELLAR](https://publications.europa.eu/webapi/rdf/sparql) | EU 법령 실시간 메타데이터 (SPARQL API) | ✅ |
 | Wayback Machine | 법령 역사적 버전 조회 | ✅ |
 
-## 도구 목록 (22개)
+## 도구 목록 (24개)
 
 ### 기본 검색 (5개)
 
@@ -34,12 +35,13 @@
 | `calculate_rvg` | 변호사 수임료 계산 (RVG 기준, 소가별 요율표) |
 | `calculate_frist` | 소송 기한 계산 (ZPO § 222, 공휴일·일요일 자동 처리) |
 
-### 검증 / 이력 (2개)
+### 검증 / 이력 (3개)
 
 | 도구 | 설명 |
 |------|------|
 | `verify_citation` | 판례 인용 검증 — AI 환각 방지 (Aktenzeichen, NJW, BGHZ, BeckRS) |
 | `get_norm_version` | 법령 역사적 버전 조회 (Wayback Machine 연동) |
+| `get_amendment_history` | BGBl 개정 이력 타임라인 — GII 실시간 파싱 + 하드코딩 병합 |
 
 ### 심층 분석 (4개) — Phase 2
 
@@ -73,6 +75,12 @@
 |------|------|
 | `search_state_law` | 16개 주 주요 법령 검색 — 약어·분야·주코드 필터 지원 |
 | `get_state_law_section` | 주법 조문 조회 — Bayern(gesetze-bayern.de) 실시간 파싱, 기타 주 URL 안내 |
+
+### 사전 / 용어 (1개) — Phase 6
+
+| 도구 | 설명 |
+|------|------|
+| `lookup_legal_term` | 독일 법률 용어 사전 — 40개 이상 용어, 한국어·영어 설명, 관련 조문, 퍼지 검색 |
 
 ## 설치
 
@@ -169,17 +177,19 @@ compare_de_eu({ thema: "Datenschutz", fokus: "abweichungen" })
 
 ```
 src/
-├── index.ts              # MCP 서버 진입점 (도구 22개 등록)
+├── index.ts              # MCP 서버 진입점 (도구 24개 등록)
 ├── lib/
-│   ├── neuris-client.ts  # NeuRIS API 클라이언트
-│   ├── gii-client.ts     # gesetze-im-internet.de 클라이언트
+│   ├── neuris-client.ts      # NeuRIS API 클라이언트
+│   ├── gii-client.ts         # gesetze-im-internet.de 클라이언트
+│   ├── bgbl-client.ts        # BGBl 개정 이력 파서 (GII 파싱)
+│   ├── eurlex-client.ts      # EUR-Lex CELLAR SPARQL 클라이언트
 │   ├── state-law-client.ts   # 주법 포털 클라이언트 (gesetze-bayern.de 등)
 │   ├── cross-references.ts   # 교차참조 텍스트 파서
 │   ├── source-grade.ts       # 소스 신뢰도 등급(A–D) 평가
-│   ├── cache.ts          # 응답 캐싱 (TTL 기반)
-│   ├── court-map.ts      # 법원 코드 매핑
+│   ├── cache.ts              # 응답 캐싱 (TTL 기반)
+│   ├── court-map.ts          # 법원 코드 매핑
 │   └── law-abbreviations.ts  # 법령 약어 데이터베이스 (50+)
-└── tools/                # 도구별 구현 (22개)
+└── tools/                # 도구별 구현 (24개)
     ├── search-law.ts
     ├── get-law-section.ts
     ├── search-case-law.ts
@@ -189,19 +199,21 @@ src/
     ├── calculate-frist.ts
     ├── verify-citation.ts
     ├── get-norm-version.ts
+    ├── get-amendment-history.ts  # Phase 6 — BGBl 개정 이력
     ├── gutachten-scaffold.ts
     ├── spot-issues.ts
     ├── analyze-case.ts
     ├── get-norm-context.ts
     ├── search-state-courts.ts
     ├── analyze-scenario.ts
-    ├── compare-de-eu.ts
+    ├── compare-de-eu.ts          # EUR-Lex 실시간 연동
     ├── get-delegation-chain.ts   # Phase 4
     ├── search-with-grade.ts      # Phase 4
     ├── extract-cross-refs.ts     # Phase 4
     ├── quality-gate.ts           # Phase 4
     ├── search-state-law.ts       # Phase 5
-    └── get-state-law-section.ts  # Phase 5
+    ├── get-state-law-section.ts  # Phase 5
+    └── lookup-legal-term.ts      # Phase 6 — 법률 용어 사전
 ```
 
 이제 Phase 4와 Phase 5 사용 예시를 추가합니다.
