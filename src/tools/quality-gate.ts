@@ -57,7 +57,7 @@ interface GateResult {
 const KNOWN_LAWS = new Set([
   "BGB", "HGB", "AktG", "GmbHG", "InsO", "ZPO", "StPO", "StGB",
   "GG", "VwGO", "VwVfG", "AO", "EStG", "KStG", "UStG", "GewStG",
-  "BDSG", "TMG", "TKG", "UWG", "WpHG", "KWG", "VAG", "GWB",
+  "BDSG", "TMG", "DDG", "TKG", "UWG", "WpHG", "KWG", "VAG", "GWB",
   "BImSchG", "WHG", "BNatSchG", "AEUV", "EUV",
   "DSGVO", "DORA", "NIS2", "MiLoG", "BetrVG", "KSchG", "ArbZG",
   "SGB", "BVerfGG", "BAföG", "FreizügG", "AufenthG",
@@ -194,7 +194,8 @@ const GATES: Gate[] = [
     check: (ctx) => {
       const euSupersedeMap: Record<string, string[]> = {
         BDSG: ["DSGVO (Verordnung (EU) 2016/679) — 우선 적용"],
-        TMG: ["DSGVO 제95조 — TMG 일부 조항 대체"],
+        TMG: ["DSGVO 제95조 — TMG 일부 조항 대체", "DDG (Digitale-Dienste-Gesetz) — TMG 2024-05-14부로 대체됨"],
+        DDG: ["DSA (Verordnung (EU) 2022/2065) — 디지털 서비스 규정 직접 적용"],
         KWG: ["CRR (Verordnung (EU) 575/2013) — 자본요건 직접 규정"],
       };
       const lawUpper = ctx.law.toUpperCase();
@@ -219,6 +220,7 @@ const GATES: Gate[] = [
       const obsoleteLaws: Record<string, string> = {
         BUNDESDATENSCHUTZGESETZ_ALT: "BDSG 2018로 대체됨",
         TELEDIENSTEGESETZ: "TMG로 대체됨 (2007)",
+        TMG: "DDG (Digitale-Dienste-Gesetz)로 대체됨 (2024-05-14 시행) — DDG를 사용하세요",
         MEDIENDIENSTE_STAATSVERTRAG: "각 주 미디어법으로 대체됨",
         HANDELSGESETZBUCH_DDR: "통일 후 HGB로 대체됨",
       };
