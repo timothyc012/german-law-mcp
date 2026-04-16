@@ -139,6 +139,155 @@ const CONTENT_CLAIMS = [
 
   // ── StVG ──
   { law: "StVG", section: "7", trigger: /Halter|Gefährdungshaftung/i, mustFind: ["Halter", "Betrieb eines Kraftfahrzeugs"], desc: "§ 7 StVG — Halterhaftung" },
+
+  // ══════════════════════════════════════════════════════════════════
+  // EXPANDED CONTENT CLAIMS — derived from source code factual claims
+  // ══════════════════════════════════════════════════════════════════
+
+  // ── BGB Allgemeines Schuldrecht ──
+  { law: "BGB", section: "241", trigger: /Nebenpflicht|Schutzpflicht|Schuldverhältnis/i, mustFind: ["Schuldner", "Gläubiger", "Pflicht"], desc: "§ 241 BGB — Pflichten aus dem Schuldverhältnis" },
+  { law: "BGB", section: "275", trigger: /Unmöglichkeit|unmöglich/i, mustFind: ["Leistung", "unmöglich"], desc: "§ 275 BGB — Ausschluss der Leistungspflicht bei Unmöglichkeit" },
+  { law: "BGB", section: "276", trigger: /Verschulden|Vorsatz|Fahrlässigkeit/i, mustFind: ["Vorsatz", "Fahrlässigkeit"], desc: "§ 276 BGB — Verantwortlichkeit des Schuldners" },
+  { law: "BGB", section: "278", trigger: /Erfüllungsgehilfe|Verrichtungsgehilfe/i, mustFind: ["Erfüllungsgehilfe", "gesetzlichen Vertreter"], desc: "§ 278 BGB — Haftung für Erfüllungsgehilfen" },
+  { law: "BGB", section: "281", trigger: /Fristsetzung|Frist.*Nacherfüllung/i, mustFind: ["Frist"], desc: "§ 281 BGB — Schadensersatz nach Fristsetzung" },
+  { law: "BGB", section: "286", trigger: /Schuldnerverzug|Mahnung|Lieferverzug/i, mustFind: ["Schuldner", "Verzug", "Mahnung"], desc: "§ 286 BGB — Verzug des Schuldners" },
+  { law: "BGB", section: "288", trigger: /Verzugszinsen|Zinsen/i, mustFind: ["Zinsen", "Verzug"], desc: "§ 288 BGB — Verzugszinsen" },
+  { law: "BGB", section: "305", trigger: /AGB|Allgemeine Geschäftsbedingungen/i, mustFind: ["Allgemeine Geschäftsbedingungen", "Bedingungen"], desc: "§ 305 BGB — Einbeziehung von AGB" },
+  { law: "BGB", section: "307", trigger: /AGB|Inhaltskontrolle|unangemessen/i, mustFind: ["unangemessen", "benachteiligt"], desc: "§ 307 BGB — Inhaltskontrolle AGB" },
+  { law: "BGB", section: "311", trigger: /Schuldverhältnis|Vertragsschluss|culpa in contrahendo/i, mustFind: ["Schuldverhältnis", "Vertrag"], desc: "§ 311 BGB — Rechtsgeschäftliche und rechtsgeschäftsähnliche Schuldverhältnisse" },
+  { law: "BGB", section: "313", trigger: /Geschäftsgrundlage|Wegfall|Störung/i, mustFind: ["Geschäftsgrundlage", "Anpassung"], desc: "§ 313 BGB — Störung der Geschäftsgrundlage" },
+  { law: "BGB", section: "314", trigger: /Dauerschuldverhältnis|wichtiger Grund/i, mustFind: ["Dauerschuldverhältnis", "wichtigem Grund"], desc: "§ 314 BGB — Kündigung von Dauerschuldverhältnissen" },
+  { law: "BGB", section: "323", trigger: /Rücktritt|Nachfrist|Fristsetzung/i, mustFind: ["Frist", "Rücktritt"], desc: "§ 323 BGB — Rücktritt wegen nicht oder nicht vertragsgemäß erbrachter Leistung" },
+  { law: "BGB", section: "346", trigger: /Rückgewähr|Rücktritt.*Folgen/i, mustFind: ["Rückgewähr", "herauszugeben"], desc: "§ 346 BGB — Wirkungen des Rücktritts" },
+  { law: "BGB", section: "355", trigger: /Widerrufsrecht|14 Tage|Widerruf/i, mustFind: ["Widerruf", "widerrufen"], desc: "§ 355 BGB — Widerrufsrecht bei Verbraucherverträgen" },
+
+  // ── BGB Allgemeiner Teil ──
+  { law: "BGB", section: "119", trigger: /Anfechtung|Irrtum/i, mustFind: ["Irrtum", "anfechten", "Anfechtung"], desc: "§ 119 BGB — Anfechtbarkeit wegen Irrtums" },
+  { law: "BGB", section: "134", trigger: /Nichtigkeit|gesetzliches Verbot/i, mustFind: ["nichtig", "gesetzliches Verbot"], desc: "§ 134 BGB — Nichtigkeit wegen Gesetzesverstoß" },
+  { law: "BGB", section: "138", trigger: /sittenwidrig|Wucher/i, mustFind: ["sittenwidrig", "nichtig"], desc: "§ 138 BGB — Sittenwidriges Rechtsgeschäft / Wucher" },
+  { law: "BGB", section: "145", trigger: /Angebot|Antrag|Vertragsschluss/i, mustFind: ["Antrag", "Angebot"], desc: "§ 145 BGB — Bindung an den Antrag" },
+  { law: "BGB", section: "164", trigger: /Stellvertretung|Vollmacht|Vertreter/i, mustFind: ["Vertreter", "Vollmacht"], desc: "§ 164 BGB — Wirkung der Willenserklärung des Vertreters" },
+  { law: "BGB", section: "186", trigger: /Fristen|Berechnung|Fristenberechnung/i, mustFind: ["Frist"], desc: "§ 186 BGB — Geltungsbereich der Fristenregeln" },
+  { law: "BGB", section: "187", trigger: /Fristbeginn|Ereignis|Fristberechnung/i, mustFind: ["Frist", "Tag"], desc: "§ 187 BGB — Fristbeginn" },
+  { law: "BGB", section: "188", trigger: /Fristende|Monats|Wochenfrist/i, mustFind: ["Frist"], desc: "§ 188 BGB — Fristende" },
+  { law: "BGB", section: "214", trigger: /Verjährung.*Einrede|Erfüllung.*verweigern/i, mustFind: ["Verjährung", "verweigern"], desc: "§ 214 BGB — Wirkung der Verjährung" },
+
+  // ── BGB Kaufrecht (weitere) ──
+  { law: "BGB", section: "435", trigger: /Rechtsmangel/i, mustFind: ["Recht", "Dritter", "Mangel"], desc: "§ 435 BGB — Rechtsmangel" },
+  { law: "BGB", section: "440", trigger: /Nacherfüllung.*fehlgeschlagen|Nacherfüllung.*unzumutbar/i, mustFind: ["Nacherfüllung", "fehlgeschlagen"], desc: "§ 440 BGB — Besondere Bestimmungen für Rücktritt und Schadensersatz" },
+  { law: "BGB", section: "442", trigger: /Kenntnis.*Mangel|Mangel.*bekannt/i, mustFind: ["Mangel", "Kenntnis"], desc: "§ 442 BGB — Kenntnis des Käufers" },
+  { law: "BGB", section: "443", trigger: /Garantie|Haltbarkeitsgarantie/i, mustFind: ["Garantie"], desc: "§ 443 BGB — Garantie" },
+  { law: "BGB", section: "475", trigger: /Verbrauchsgüterkauf.*Abdingbarkeit|Gebrauchtwagen/i, mustFind: ["Verbraucher", "Unternehmer"], desc: "§ 475 BGB — Anwendung auf den Verbrauchsgüterkauf" },
+  { law: "BGB", section: "478", trigger: /Lieferantenregress|Regress/i, mustFind: ["Lieferkette", "Verkäufer", "Regress"], desc: "§ 478 BGB — Rückgriff des Unternehmers" },
+
+  // ── BGB Mietrecht (weitere) ──
+  { law: "BGB", section: "536a", trigger: /Schadensersatz.*Vermieter|Mietmangel.*Verschulden/i, mustFind: ["Schadensersatz", "Vermieter"], desc: "§ 536a BGB — Schadensersatzpflicht des Vermieters wegen Mängel" },
+  { law: "BGB", section: "536c", trigger: /Anzeigepflicht.*Mieter|Mangel.*anzeigen/i, mustFind: ["Anzeige", "Mieter", "Mangel"], desc: "§ 536c BGB — Während der Mietzeit auftretende Mängel" },
+  { law: "BGB", section: "550", trigger: /Schriftform.*Mietvertrag|langfristig.*Miete/i, mustFind: ["Schriftform", "Mietvertrag"], desc: "§ 550 BGB — Schriftform des Mietvertrags" },
+  { law: "BGB", section: "551", trigger: /Mietkaution|Kaution/i, mustFind: ["Sicherheit", "Kaution", "Mieter"], desc: "§ 551 BGB — Begrenzung und Anlage von Mietsicherheiten" },
+  { law: "BGB", section: "556", trigger: /Nebenkosten|Betriebskosten/i, mustFind: ["Betriebskosten", "Nebenkosten"], desc: "§ 556 BGB — Vereinbarungen über Betriebskosten" },
+  { law: "BGB", section: "557a", trigger: /Staffelmiete/i, mustFind: ["Miete", "Erhöhung"], desc: "§ 557a BGB — Staffelmiete" },
+  { law: "BGB", section: "557b", trigger: /Indexmiete/i, mustFind: ["Miete", "Index"], desc: "§ 557b BGB — Indexmiete" },
+  { law: "BGB", section: "558", trigger: /Mieterhöhung|Vergleichsmiete/i, mustFind: ["Miete", "Vergleich", "Erhöhung"], desc: "§ 558 BGB — Mieterhöhung bis zur ortsüblichen Vergleichsmiete" },
+  { law: "BGB", section: "568", trigger: /Schriftform.*Kündigung.*Miete|Kündigungsform/i, mustFind: ["Schriftform", "Kündigung"], desc: "§ 568 BGB — Schriftform der Kündigung" },
+  { law: "BGB", section: "574", trigger: /Härteklausel|Widerspruch.*Kündigung|soziale Härte/i, mustFind: ["Widerspruch", "Härt"], desc: "§ 574 BGB — Widerspruch des Mieters gegen die Kündigung" },
+  { law: "BGB", section: "574b", trigger: /Widerspruch.*Monate.*Kündigung|2 Monate.*Kündigung/i, mustFind: ["Widerspruch", "Monat"], desc: "§ 574b BGB — Form und Frist des Widerspruchs" },
+
+  // ── BGB Arbeitsrecht ──
+  { law: "BGB", section: "611", trigger: /Dienstvertrag|Dienste/i, mustFind: ["Dienste", "Dienstvertrag"], desc: "§ 611 BGB — Vertragstypische Pflichten beim Dienstvertrag" },
+  { law: "BGB", section: "611a", trigger: /Arbeitsvertrag|Arbeitnehmer/i, mustFind: ["Arbeitnehmer", "Arbeitgeber"], desc: "§ 611a BGB — Arbeitsvertrag" },
+  { law: "BGB", section: "622", trigger: /Kündigungsfrist.*Arbeit|Arbeit.*Kündigung.*Frist/i, mustFind: ["Kündigungsfrist", "Wochen"], desc: "§ 622 BGB — Kündigungsfristen bei Arbeitsverhältnissen" },
+  { law: "BGB", section: "623", trigger: /Schriftform.*Kündigung.*Arbeit/i, mustFind: ["Schriftform", "unwirksam"], desc: "§ 623 BGB — Schriftform der Kündigung im Arbeitsrecht" },
+
+  // ── BGB Deliktsrecht (weitere) ──
+  { law: "BGB", section: "826", trigger: /sittenwidrig.*Schaden|vorsätzlich.*sittenwidrig/i, mustFind: ["Vorsatz", "sittenwidrig"], desc: "§ 826 BGB — Sittenwidrige vorsätzliche Schädigung" },
+  { law: "BGB", section: "831", trigger: /Verrichtungsgehilfe|Haftung.*Gehilfe/i, mustFind: ["Verrichtungsgehilfe", "Schaden"], desc: "§ 831 BGB — Haftung für den Verrichtungsgehilfen" },
+
+  // ── BGB Bereicherungsrecht (weitere) ──
+  { law: "BGB", section: "818", trigger: /Herausgabe.*Bereicherung|Bereicherung.*Herausgabe/i, mustFind: ["herauszugeben", "Bereicherung"], desc: "§ 818 BGB — Umfang des Bereicherungsanspruchs" },
+
+  // ── BGB Erbrecht ──
+  { law: "BGB", section: "1922", trigger: /Erbfolge|Erbschaft|Nachlass/i, mustFind: ["Erbfolge", "Erbe", "Nachlass"], desc: "§ 1922 BGB — Gesetzliche Erbfolge" },
+  { law: "BGB", section: "2229", trigger: /Testament|Testierfähigkeit/i, mustFind: ["Testament", "testieren"], desc: "§ 2229 BGB — Testierfähigkeit" },
+  { law: "BGB", section: "2303", trigger: /Pflichtteil/i, mustFind: ["Pflichtteil"], desc: "§ 2303 BGB — Pflichtteilsberechtigte" },
+
+  // ── BGB Sachenrecht ──
+  { law: "BGB", section: "903", trigger: /Eigentum|Eigentumsrecht/i, mustFind: ["Eigentümer", "Eigentum"], desc: "§ 903 BGB — Befugnisse des Eigentümers" },
+  { law: "BGB", section: "929", trigger: /Eigentumsübertragung|Übereignung/i, mustFind: ["Eigentum", "Übergabe"], desc: "§ 929 BGB — Einigung und Übergabe" },
+  { law: "BGB", section: "985", trigger: /Herausgabeanspruch|Eigentumsherausgabe/i, mustFind: ["Herausgabe", "Eigentümer"], desc: "§ 985 BGB — Herausgabeanspruch des Eigentümers" },
+
+  // ── BGB Werkvertrag ──
+  { law: "BGB", section: "631", trigger: /Werkvertrag|Herstellung|Handwerker/i, mustFind: ["Werk", "Vergütung"], desc: "§ 631 BGB — Vertragstypische Pflichten beim Werkvertrag" },
+  { law: "BGB", section: "634", trigger: /Werkmangel|Nacherfüllung.*Werk/i, mustFind: ["Mangel", "Nacherfüllung"], desc: "§ 634 BGB — Rechte des Bestellers bei Mängeln" },
+
+  // ── BGB Darlehen / Bürgschaft ──
+  { law: "BGB", section: "488", trigger: /Darlehen|Kredit|Darlehensvertrag/i, mustFind: ["Darlehen", "Zinsen"], desc: "§ 488 BGB — Vertragstypische Pflichten beim Darlehensvertrag" },
+  { law: "BGB", section: "765", trigger: /Bürgschaft/i, mustFind: ["Bürgschaft", "Bürge"], desc: "§ 765 BGB — Vertragstypische Pflichten bei der Bürgschaft" },
+
+  // ── ZPO (weitere) ──
+  { law: "ZPO", section: "253", trigger: /Klage|Klageschrift|Klageerhebung/i, mustFind: ["Klageschrift", "Klage"], desc: "§ 253 ZPO — Klageschrift" },
+  { law: "ZPO", section: "276", trigger: /Klageerwiderung/i, mustFind: ["Klageerwiderung", "Frist"], desc: "§ 276 ZPO — Klageerwiderung" },
+  { law: "ZPO", section: "292", trigger: /Beweislast|Vermutung/i, mustFind: ["Beweislast", "Vermutung"], desc: "§ 292 ZPO — Beweis des Gegenteils" },
+  { law: "ZPO", section: "511", trigger: /Berufung.*zulässig/i, mustFind: ["Berufung"], desc: "§ 511 ZPO — Statthaftigkeit der Berufung" },
+  { law: "ZPO", section: "544", trigger: /Nichtzulassungsbeschwerde/i, mustFind: ["Revision", "Zulassung", "Beschwerde"], desc: "§ 544 ZPO — Nichtzulassungsbeschwerde" },
+  { law: "ZPO", section: "551", trigger: /Revisionsbegründung/i, mustFind: ["Revision", "Begründung"], desc: "§ 551 ZPO — Revisionsbegründung" },
+  { law: "ZPO", section: "688", trigger: /Mahnverfahren|Mahnbescheid/i, mustFind: ["Mahnbescheid", "Mahnung"], desc: "§ 688 ZPO — Zulässigkeit des Mahnverfahrens" },
+  { law: "ZPO", section: "704", trigger: /Vollstreckungstitel|Zwangsvollstreckung/i, mustFind: ["Vollstreckung", "Urteil"], desc: "§ 704 ZPO — Vollstreckbare Endurteile" },
+  { law: "ZPO", section: "78", trigger: /Anwaltszwang|Rechtsanwalt.*Pflicht/i, mustFind: ["Rechtsanwalt", "vertreten"], desc: "§ 78 ZPO — Anwaltsprozess" },
+
+  // ── BetrVG ──
+  { law: "BetrVG", section: "1", trigger: /Betriebsrat/i, mustFind: ["Betriebsrat", "Betrieb"], desc: "§ 1 BetrVG — Errichtung von Betriebsräten" },
+  { law: "BetrVG", section: "102", trigger: /Betriebsrat.*Anhörung|Kündigung.*Betriebsrat/i, mustFind: ["Betriebsrat", "Kündigung", "Anhörung"], desc: "§ 102 BetrVG — Mitbestimmung bei Kündigungen" },
+
+  // ── BUrlG ──
+  { law: "BUrlG", section: "1", trigger: /Urlaubsanspruch|Urlaub/i, mustFind: ["Urlaub", "Erholung"], desc: "§ 1 BUrlG — Urlaubsanspruch" },
+  { law: "BUrlG", section: "3", trigger: /Mindesturlaub|24 Werktage/i, mustFind: ["Werktage", "Urlaub"], desc: "§ 3 BUrlG — Dauer des Urlaubs" },
+  { law: "BUrlG", section: "7", trigger: /Urlaubsabgeltung|Urlaubsgewährung|Verfall.*Urlaub/i, mustFind: ["Urlaub", "Abgeltung"], desc: "§ 7 BUrlG — Zeitpunkt, Übertragbarkeit und Abgeltung des Urlaubs" },
+
+  // ── ArbZG ──
+  { law: "ArbZG", section: "3", trigger: /Arbeitszeit.*Maximum|8 Stunden/i, mustFind: ["Stunden", "Arbeitnehmer"], desc: "§ 3 ArbZG — Arbeitszeit der Arbeitnehmer" },
+
+  // ── KSchG (weitere) ──
+  { law: "KSchG", section: "7", trigger: /Kündigungsfiktion|gilt als wirksam/i, mustFind: ["wirksam", "Frist"], desc: "§ 7 KSchG — Wirksamwerden der Kündigung" },
+  { law: "KSchG", section: "17", trigger: /Massenentlassung/i, mustFind: ["Massenentlassung", "Arbeitnehmer"], desc: "§ 17 KSchG — Anzeigepflicht bei Massenentlassung" },
+
+  // ── GVG ──
+  { law: "GVG", section: "23", trigger: /Amtsgericht.*Zuständigkeit|Streitwert.*5000/i, mustFind: ["Amtsgericht", "Zuständigkeit"], desc: "§ 23 GVG — Zuständigkeit des Amtsgerichts" },
+
+  // ── StGB (weitere) ──
+  { law: "StGB", section: "242", trigger: /Diebstahl|gestohlen/i, mustFind: ["Diebstahl", "Wegnahme"], desc: "§ 242 StGB — Diebstahl" },
+  { law: "StGB", section: "223", trigger: /Körperverletzung.*Straf/i, mustFind: ["Körperverletzung"], desc: "§ 223 StGB — Körperverletzung" },
+  { law: "StGB", section: "185", trigger: /Beleidigung/i, mustFind: ["Beleidigung"], desc: "§ 185 StGB — Beleidigung" },
+
+  // ── GmbHG ──
+  { law: "GmbHG", section: "1", trigger: /GmbH.*Gründung|Gesellschaft.*beschränkter Haftung/i, mustFind: ["Gesellschaft", "Haftung"], desc: "§ 1 GmbHG — Zweck der GmbH" },
+  { law: "GmbHG", section: "5", trigger: /Stammkapital|25000/i, mustFind: ["Stammkapital"], desc: "§ 5 GmbHG — Stammkapital" },
+  { law: "GmbHG", section: "13", trigger: /juristische Person|Haftung.*GmbH/i, mustFind: ["Gesellschaft", "Haftung"], desc: "§ 13 GmbHG — Juristische Person" },
+  { law: "GmbHG", section: "30", trigger: /Kapitalerhaltung|Stammkapital.*Auszahlung/i, mustFind: ["Stammkapital", "Gläubiger"], desc: "§ 30 GmbHG — Kapitalerhaltung" },
+
+  // ── InsO ──
+  { law: "InsO", section: "1", trigger: /Insolvenz|Zweck.*Insolvenz/i, mustFind: ["Insolvenz", "Gläubiger"], desc: "§ 1 InsO — Ziele des Insolvenzverfahrens" },
+
+  // ── HGB ──
+  { law: "HGB", section: "377", trigger: /Mängelrüge.*Handelskauf|Untersuchungspflicht/i, mustFind: ["Mängel", "Rüge", "Käufer"], desc: "§ 377 HGB — Untersuchungs- und Rügepflicht" },
+
+  // ── GWB ──
+  { law: "GWB", section: "1", trigger: /Kartell|Wettbewerbsverbot/i, mustFind: ["Kartell", "Wettbewerb"], desc: "§ 1 GWB — Verbot von Wettbewerbsbeschränkungen" },
+
+  // ── UWG ──
+  { law: "UWG", section: "1", trigger: /unlauterer Wettbewerb|Wettbewerb.*Schutz/i, mustFind: ["Wettbewerb", "Mitbewerber"], desc: "§ 1 UWG — Zweck des UWG" },
+
+  // ── VwVfG ──
+  { law: "VwVfG", section: "35", trigger: /Verwaltungsakt/i, mustFind: ["Verwaltungsakt", "Behörde"], desc: "§ 35 VwVfG — Begriff des Verwaltungsakts" },
+
+  // ── VwGO (weitere) ──
+  { law: "VwGO", section: "58", trigger: /Rechtsmittelbelehrung|ohne Belehrung/i, mustFind: ["Belehrung", "Frist"], desc: "§ 58 VwGO — Beginn der Klagefrist ohne Rechtsmittelbelehrung" },
+
+  // ── AGG ──
+  { law: "AGG", section: "1", trigger: /Diskriminierung|Benachteiligung.*AGG/i, mustFind: ["Benachteiligung", "Diskriminierung"], desc: "§ 1 AGG — Ziel des AGG" },
+
+  // ── MuSchG ──
+  { law: "MuSchG", section: "17", trigger: /Mutterschutz.*Kündigung|Kündigungsverbot.*Schwangerschaft/i, mustFind: ["Kündigung", "Schwangerschaft"], desc: "§ 17 MuSchG — Kündigungsverbot" },
 ];
 
 // ── Regex to extract § references from source files ──────────────────────────
