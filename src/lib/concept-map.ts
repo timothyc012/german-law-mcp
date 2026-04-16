@@ -65,7 +65,7 @@ const CONCEPT_MAP: ConceptEntry[] = [
 
   // ═══ Arbeitsrecht ═══
   { keywords: ["kündigungsschutz", "soziale rechtfertigung", "unwirksame kündigung"], norm: "§ 1 KSchG", description: "Kündigungsschutz — soziale Rechtfertigung", category: "Arbeitsrecht" },
-  { keywords: ["fristlose kündigung arbeit", "außerordentliche kündigung arbeit", "sofort entlassen"], norm: "§ 626 BGB", description: "Außerordentliche Kündigung Arbeitsverhältnis", category: "Arbeitsrecht" },
+  { keywords: ["fristlose kündigung", "fristlose kündigung arbeit", "außerordentliche kündigung arbeit", "sofort entlassen"], norm: "§ 626 BGB", description: "Außerordentliche Kündigung Arbeitsverhältnis", category: "Arbeitsrecht" },
   { keywords: ["kündigungsschutzklage", "3 wochen frist", "klage arbeitsgericht"], norm: "§ 4 KSchG", description: "Kündigungsschutzklage — 3-Wochen-Frist", category: "Arbeitsrecht" },
   { keywords: ["abmahnung arbeit", "verwarnung", "ermahnung"], norm: "§ 626 Abs. 1 BGB", description: "Abmahnung als Voraussetzung", category: "Arbeitsrecht" },
   { keywords: ["weiterbeschäftigung", "weiter beschäftigen"], norm: "§ 102 Abs. 4 BetrVG", description: "Weiterbeschäftigungsanspruch", category: "Arbeitsrecht" },
@@ -117,14 +117,15 @@ const CONCEPT_MAP: ConceptEntry[] = [
   { keywords: ["werkvertrag", "handwerker", "bauleistung", "herstellung"], norm: "§ 631 BGB", description: "Werkvertrag", category: "Vertragsrecht" },
   { keywords: ["dienstvertrag", "dienstleistung", "beratervertrag"], norm: "§ 611 BGB", description: "Dienstvertrag", category: "Vertragsrecht" },
   { keywords: ["darlehensvertrag", "kredit", "darlehen", "zins"], norm: "§ 488 BGB", description: "Darlehensvertrag", category: "Vertragsrecht" },
-  { keywords: ["bürgschaft", "bürgschaftserklärung", "garantie"], norm: "§ 765 BGB", description: "Bürgschaft", category: "Vertragsrecht" },
+  { keywords: ["bürgschaft für einen kredit", "kreditbürgschaft", "bürgschaft", "bürgschaftserklärung", "garantie"], norm: "§ 765 BGB", description: "Bürgschaft", category: "Vertragsrecht" },
+  { keywords: ["unterlassung", "beseitigungsanspruch", "störung eigentum", "fortdauernde störung"], norm: "§ 1004 BGB", description: "Beseitigungs- und Unterlassungsanspruch", category: "Sachenrecht" },
 
   // ═══ Datenschutz ═══
   { keywords: ["dsgvo auskunft", "auskunft personenbezogene daten", "auskunftsrecht"], norm: "Art. 15 DSGVO", description: "Auskunftsrecht", category: "Datenschutz" },
   { keywords: ["dsgvo löschung", "recht auf vergessen", "löschung daten", "löschantrag"], norm: "Art. 17 DSGVO", description: "Recht auf Löschung", category: "Datenschutz" },
   { keywords: ["datenpanne", "datenleck", "datenschutzverletzung", "sicherheitsverletzung"], norm: "Art. 33 DSGVO", description: "Meldepflicht bei Datenpanne", category: "Datenschutz" },
   { keywords: ["datenschutz schadensersatz", "dsgvo entschädigung"], norm: "Art. 82 DSGVO", description: "Schadensersatz bei DSGVO-Verstoß", category: "Datenschutz" },
-  { keywords: ["einwilligung", "consent", "zustimmung daten"], norm: "Art. 6 Abs. 1 S. 1 lit. a DSGVO", description: "Einwilligung als Rechtsgrundlage", category: "Datenschutz" },
+  { keywords: ["datenschutz", "personenbezogene daten", "datenverarbeitung", "einwilligung", "consent", "zustimmung daten"], norm: "Art. 6 Abs. 1 S. 1 lit. a DSGVO", description: "Einwilligung als Rechtsgrundlage", category: "Datenschutz" },
   { keywords: ["auftragsverarbeitung", "avv", "datenverarbeiter"], norm: "Art. 28 DSGVO", description: "Auftragsverarbeitungsvertrag", category: "Datenschutz" },
 
   // ═══ Erbrecht ═══
@@ -167,8 +168,9 @@ export function searchConceptMap(query: string): ConceptMatch[] {
 
       // Phrase-level matching: if the query contains the keyword as a substring, score 1.0
       if (kw.includes(" ") && lowerQuery.includes(kw)) {
-        if (1.0 > bestScore) {
-          bestScore = 1.0;
+        const phraseScore = 1 + Math.min(kw.length, lowerQuery.length) / 1000;
+        if (phraseScore > bestScore) {
+          bestScore = phraseScore;
           bestKeyword = keyword;
         }
         continue;

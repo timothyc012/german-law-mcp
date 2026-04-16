@@ -163,7 +163,7 @@ function parseCitation(zitat: string): ParsedCitation {
   // Unterstützt auch OLG/LG/AG: OLG München, Urt. v. 12.03.2023 – 1 U 123/22
   const COURT_RE = "BGH|BVerfG|BAG|BVerwG|BFH|BSG|BPatG|(?:OLG|LG|AG|VG|OVG|ArbG|LAG|FG)\\s+\\w+";
   const vollAzMatch = raw.match(
-    new RegExp(`^(${COURT_RE})[,\\s]+(?:Urt\\.|Beschl\\.|Bes\\.)?\\s*v\\.?\\s*(\\d{1,2}\\.\\d{1,2}\\.\\d{4})\\s*[–—-]\\s*([IVX\\d]+\\s+\\w+\\s+\\d+\\/\\d+)`, "i"),
+    new RegExp(`^(${COURT_RE})[,\\s]+(?:Urt\\.|Beschl\\.|Bes\\.)?\\s*v\\.?\\s*(\\d{1,2}\\.\\d{1,2}\\.\\d{4})\\s*[–—-]\\s*([IVX\\d]+\\s+\\w+\\s+\\d+\\/\\d+[a-z]*)`, "i"),
   );
   if (vollAzMatch) {
     return {
@@ -177,7 +177,7 @@ function parseCitation(zitat: string): ParsedCitation {
 
   // Reines Aktenzeichen: BGH IX ZR 123/22, OLG München 1 U 123/22
   const azMatch = raw.match(
-    new RegExp(`^(${COURT_RE})\\s+([IVX\\d]+\\s+\\w+\\s+\\d+\\/\\d+|\\d+\\s+\\w+\\s+\\d+\\/\\d+)`, "i"),
+    new RegExp(`^(${COURT_RE})\\s+([IVX\\d]+\\s+\\w+\\s+\\d+\\/\\d+[a-z]*|\\d+\\s+\\w+\\s+\\d+\\/\\d+[a-z]*)`, "i"),
   );
   if (azMatch) {
     return {

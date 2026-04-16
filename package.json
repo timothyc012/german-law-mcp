@@ -16,6 +16,7 @@
     "verify:docs": "node scripts/check-doc-sync.mjs",
     "verify:live-law": "node scripts/legal-verify.mjs",
     "verify": "npm run typecheck && npm run verify:regression && npm run verify:docs",
+    "score": "node scripts/scorecard.mjs",
     "start": "node dist/index.js",
     "dev": "tsc --watch"
   },
