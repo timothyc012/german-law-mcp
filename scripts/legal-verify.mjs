@@ -75,34 +75,70 @@ const ART_LAWS = new Set(["GG", "EGBGB"]);
 // the GII text for `law`/`section` contains at least one of `mustFind`.
 
 const CONTENT_CLAIMS = [
-  {
-    law: "BGB",
-    section: "195",
-    trigger: /drei Jahre|3 Jahre|3-jährig/i,
-    mustFind: ["drei Jahre", "3 Jahre"],
-    desc: "§ 195 BGB — Regelverjährung 3 Jahre",
-  },
-  {
-    law: "BGB",
-    section: "477",
-    trigger: /Beweislast|Beweislastumkehr/i,
-    mustFind: ["vermutet", "Beweislast"],
-    desc: "§ 477 BGB — Beweislastumkehr (vermutet)",
-  },
-  {
-    law: "BGB",
-    section: "438",
-    trigger: /arglistig/i,
-    mustFind: ["arglistig"],
-    desc: "§ 438 Abs. 3 BGB — arglistig",
-  },
-  {
-    law: "BGB",
-    section: "434",
-    trigger: /Sachmangel/i,
-    mustFind: ["Sachmangel", "mangelfrei"],
-    desc: "§ 434 BGB — Sachmangel definition",
-  },
+  // ── BGB Verjährung ──
+  { law: "BGB", section: "195", trigger: /drei Jahre|3 Jahre/i, mustFind: ["drei Jahre"], desc: "§ 195 BGB — Regelverjährung 3 Jahre" },
+  { law: "BGB", section: "199", trigger: /Verjährungsbeginn|Kenntnis/i, mustFind: ["Kenntnis"], desc: "§ 199 BGB — Verjährungsbeginn bei Kenntnis" },
+
+  // ── BGB Kaufrecht ──
+  { law: "BGB", section: "433", trigger: /Kaufvertrag|Käufer/i, mustFind: ["Kaufvertrag", "Käufer"], desc: "§ 433 BGB — Kaufvertrag Pflichten" },
+  { law: "BGB", section: "434", trigger: /Sachmangel/i, mustFind: ["Sachmangel", "mangelfrei"], desc: "§ 434 BGB — Sachmangel Definition" },
+  { law: "BGB", section: "437", trigger: /Nacherfüllung|Rücktritt|Schadensersatz/i, mustFind: ["Nacherfüllung", "zurücktreten", "Schadensersatz"], desc: "§ 437 BGB — Käuferrechte bei Mängeln" },
+  { law: "BGB", section: "438", trigger: /arglistig/i, mustFind: ["arglistig"], desc: "§ 438 Abs. 3 BGB — arglistiges Verschweigen" },
+  { law: "BGB", section: "438", trigger: /zwei Jahr|2 Jahr/i, mustFind: ["zwei Jahren"], desc: "§ 438 Abs. 1 Nr. 3 BGB — 2 Jahre Gewährleistung" },
+  { law: "BGB", section: "439", trigger: /Nacherfüllung/i, mustFind: ["Nacherfüllung", "Beseitigung des Mangels"], desc: "§ 439 BGB — Nacherfüllung" },
+  { law: "BGB", section: "441", trigger: /Minderung/i, mustFind: ["Minderung", "herabsetzen"], desc: "§ 441 BGB — Minderung" },
+  { law: "BGB", section: "444", trigger: /arglistig|Haftungsausschluss/i, mustFind: ["arglistig"], desc: "§ 444 BGB — Haftungsausschluss bei Arglist" },
+  { law: "BGB", section: "446", trigger: /Gefahrübergang/i, mustFind: ["Gefahr", "Übergabe"], desc: "§ 446 BGB — Gefahrübergang" },
+  { law: "BGB", section: "474", trigger: /Verbrauchsgüterkauf/i, mustFind: ["Verbraucher", "Unternehmer"], desc: "§ 474 BGB — Verbrauchsgüterkauf" },
+  { law: "BGB", section: "477", trigger: /Beweislast|vermutet/i, mustFind: ["vermutet", "Beweislast"], desc: "§ 477 BGB — Beweislastumkehr" },
+
+  // ── BGB Mietrecht ──
+  { law: "BGB", section: "535", trigger: /Mietvertrag|Mieter/i, mustFind: ["Mieter", "Vermieter"], desc: "§ 535 BGB — Mietvertrag Hauptpflichten" },
+  { law: "BGB", section: "536", trigger: /Mietminderung|Mangel/i, mustFind: ["Mangel", "Minderung", "gemindert"], desc: "§ 536 BGB — Mietminderung" },
+  { law: "BGB", section: "543", trigger: /fristlos|wichtiger Grund/i, mustFind: ["wichtiger Grund", "außerordentlich"], desc: "§ 543 BGB — Fristlose Kündigung Mietvertrag" },
+  { law: "BGB", section: "573", trigger: /berechtigtes Interesse|Eigenbedarf/i, mustFind: ["berechtigtes Interesse"], desc: "§ 573 BGB — Ordentliche Kündigung" },
+  { law: "BGB", section: "573c", trigger: /Kündigungsfrist|3 Monate/i, mustFind: ["drei Monate", "drei Monaten"], desc: "§ 573c BGB — Kündigungsfristen" },
+
+  // ── BGB Schadensersatz ──
+  { law: "BGB", section: "280", trigger: /Pflichtverletzung|Schadensersatz/i, mustFind: ["Pflichtverletzung", "Schadensersatz"], desc: "§ 280 BGB — Schadensersatz wegen Pflichtverletzung" },
+  { law: "BGB", section: "823", trigger: /Körper|Gesundheit|Eigentum/i, mustFind: ["Leben", "Körper", "Gesundheit", "Eigentum"], desc: "§ 823 BGB — Deliktsrecht absolute Rechtsgüter" },
+  { law: "BGB", section: "249", trigger: /Naturalrestitution|Wiederherstellung/i, mustFind: ["Zustand herzustellen", "Herstellung"], desc: "§ 249 BGB — Naturalrestitution" },
+  { law: "BGB", section: "253", trigger: /Schmerzensgeld|immateriell/i, mustFind: ["billige Entschädigung", "nicht Vermögensschaden"], desc: "§ 253 BGB — Schmerzensgeld" },
+  { law: "BGB", section: "254", trigger: /Mitverschulden/i, mustFind: ["Mitverschulden", "Verschulden des Beschädigten"], desc: "§ 254 BGB — Mitverschulden" },
+
+  // ── BGB Allgemein ──
+  { law: "BGB", section: "242", trigger: /Treu und Glauben/i, mustFind: ["Treu und Glauben"], desc: "§ 242 BGB — Treu und Glauben" },
+  { law: "BGB", section: "812", trigger: /Bereicherung|ohne Rechtsgrund/i, mustFind: ["ohne rechtlichen Grund", "Bereicherung"], desc: "§ 812 BGB — Ungerechtfertigte Bereicherung" },
+  { law: "BGB", section: "626", trigger: /fristlos|wichtiger Grund/i, mustFind: ["wichtigem Grund", "wichtiger Grund"], desc: "§ 626 BGB — Fristlose Kündigung" },
+  { law: "BGB", section: "193", trigger: /Feiertag|Sonntag|Samstag/i, mustFind: ["Sonntag", "Feiertag", "Samstag"], desc: "§ 193 BGB — Fristverschiebung Werktag" },
+
+  // ── ZPO Fristen ──
+  { law: "ZPO", section: "517", trigger: /Berufungsfrist|eines Monats/i, mustFind: ["eines Monats", "einen Monat"], desc: "§ 517 ZPO — Berufungsfrist 1 Monat" },
+  { law: "ZPO", section: "520", trigger: /Berufungsbegründung/i, mustFind: ["zwei Monaten", "zwei Monate"], desc: "§ 520 ZPO — Berufungsbegründung 2 Monate" },
+  { law: "ZPO", section: "548", trigger: /Revisionsfrist/i, mustFind: ["eines Monats", "einen Monat"], desc: "§ 548 ZPO — Revisionsfrist 1 Monat" },
+  { law: "ZPO", section: "339", trigger: /Einspruch|Versäumnisurteil/i, mustFind: ["zwei Wochen", "Einspruch"], desc: "§ 339 ZPO — Einspruch 2 Wochen" },
+  { law: "ZPO", section: "694", trigger: /Widerspruch|Mahnbescheid/i, mustFind: ["Widerspruch"], desc: "§ 694 ZPO — Widerspruch Mahnbescheid" },
+  { law: "ZPO", section: "700", trigger: /Vollstreckungsbescheid/i, mustFind: ["Vollstreckungsbescheid"], desc: "§ 700 ZPO — Vollstreckungsbescheid" },
+
+  // ── Arbeitsrecht ──
+  { law: "KSchG", section: "1", trigger: /sozial ungerechtfertigt|Kündigungsschutz/i, mustFind: ["sozial ungerechtfertigt", "sozial gerechtfertigt"], desc: "§ 1 KSchG — Soziale Rechtfertigung" },
+  { law: "KSchG", section: "4", trigger: /drei Wochen|3 Wochen|Klagefrist/i, mustFind: ["drei Wochen", "innerhalb von drei Wochen"], desc: "§ 4 KSchG — 3-Wochen-Klagefrist" },
+  { law: "KSchG", section: "23", trigger: /zehn Arbeitnehmer|10 Arbeitnehmer/i, mustFind: ["zehn Arbeitnehmer", "mehr als zehn"], desc: "§ 23 KSchG — Schwellenwert 10 AN" },
+  { law: "ArbGG", section: "66", trigger: /Berufungsfrist.*Arbeit/i, mustFind: ["eines Monats", "einen Monat"], desc: "§ 66 ArbGG — Berufungsfrist Arbeitsgericht" },
+
+  // ── StGB ──
+  { law: "StGB", section: "263", trigger: /Betrug|Täuschung/i, mustFind: ["Täuschung", "Vermögensvorteil", "Vermögensschaden"], desc: "§ 263 StGB — Betrug" },
+
+  // ── Verwaltungsrecht ──
+  { law: "VwGO", section: "70", trigger: /Widerspruchsfrist|eines Monats/i, mustFind: ["eines Monats", "einen Monat"], desc: "§ 70 VwGO — Widerspruchsfrist 1 Monat" },
+  { law: "VwGO", section: "74", trigger: /Anfechtungsklage|eines Monats/i, mustFind: ["eines Monats", "einen Monat"], desc: "§ 74 VwGO — Klagefrist 1 Monat" },
+
+  // ── StPO ──
+  { law: "StPO", section: "317", trigger: /Berufung.*Straf|Woche/i, mustFind: ["Woche"], desc: "§ 317 StPO — Berufungsbegründung Strafrecht" },
+  { law: "StPO", section: "341", trigger: /Revision.*Straf|eine Woche/i, mustFind: ["eine Woche", "einer Woche"], desc: "§ 341 StPO — Revisionsfrist Strafrecht 1 Woche" },
+
+  // ── StVG ──
+  { law: "StVG", section: "7", trigger: /Halter|Gefährdungshaftung/i, mustFind: ["Halter", "Betrieb eines Kraftfahrzeugs"], desc: "§ 7 StVG — Halterhaftung" },
 ];
 
 // ── Regex to extract § references from source files ──────────────────────────
