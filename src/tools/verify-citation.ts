@@ -17,6 +17,7 @@
 
 import { z } from "zod";
 import { searchCaseLaw, type CaseLawSearchResult } from "../lib/neuris-client.js";
+import { searchByAktenzeichen } from "../lib/old-client.js";
 
 // ── Zitat-Parser ──────────────────────────────────────────────────────────
 
@@ -224,6 +225,32 @@ async function verifyCitationInternal(parsed: ParsedCitation): Promise<Verificat
     } catch (_) {}
     // OLG/LG/AG: NeuRIS covers federal courts only — not hallucination, just outside DB scope
     const isNonFederal = /^(OLG|LG|AG|VG|OVG|ArbG|LAG|FG)\s/i.test(parsed.gericht);
+
+    // Try Open Legal Data for non-federal courts
+    if (isNonFederal) {
+      try {
+        const oldResult = await searchByAktenzeichen(parsed.aktenzeichen!, 3);
+        if (oldResult.count > 0) {
+          const match = oldResult.results[0];
+          return {
+            ...base,
+            gefunden: true,
+            confidence: "high",
+            normalisiertesZitat: `${match.court.name}, ${match.date} – ${match.file_number}`,
+            entscheidung: {
+              gericht: match.court.name,
+              datum: match.date,
+              aktenzeichen: match.file_number,
+              kurzinhalt: `Verified via Open Legal Data (${match.type}, ECLI: ${match.ecli || "n/a"})`,
+            },
+            hinweis: `Quelle: de.openlegaldata.io (352.000+ Entscheidungen). Volltext verfügbar.`,
+          };
+        }
+      } catch (_) {
+        // OLD API failed — fall through to medium confidence
+      }
+    }
+
     return {
       ...base,
       gefunden: false,
