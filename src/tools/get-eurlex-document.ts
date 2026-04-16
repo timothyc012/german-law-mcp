@@ -50,6 +50,6 @@ export async function getEurLexDocumentTool(input: GetEurLexDocumentInput): Prom
     return lines.join("\n");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return `[EUR-Lex 문서 조회 오류] ${message}\n\nCELEX 번호를 확인해 주세요. search_eurlex로 먼저 검색하세요.`;
+    return `[오류] EUR-Lex 문서 조회 실패: ${message}\n\nCELEX 번호를 확인해 주세요. search_eurlex로 먼저 검색하세요.`;
   }
 }

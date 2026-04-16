@@ -62,7 +62,7 @@ export async function getCaseText(input: GetCaseTextInput): Promise<string> {
     return lines.join("\n");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return `[판결문 조회 오류] ${message}\n\n문서번호를 확인해 주세요. search_case_law로 먼저 검색하세요.`;
+    return `[오류] 판결문 조회 실패: ${message}\n\n문서번호를 확인해 주세요. search_case_law로 먼저 검색하세요.`;
   }
 }
 

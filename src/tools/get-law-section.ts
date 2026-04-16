@@ -64,6 +64,6 @@ export async function getLawSection(input: GetLawSectionInput): Promise<string> 
     return lines.join("\n");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return `[\uC870\uBB38 \uC870\uD68C \uC624\uB958] ${message}\n\n\uBC95\uB960 \uC57D\uC5B4(BGB, StGB \uB4F1)\uC640 \uC870\uBB38 \uBC88\uD638\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694.`;
+    return `[오류] 조문 조회 실패: ${message}\n\n법률 약어(BGB, StGB 등)와 조문 번호를 확인해 주세요.`;
   }
 }

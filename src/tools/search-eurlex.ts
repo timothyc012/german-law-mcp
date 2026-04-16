@@ -54,6 +54,6 @@ export async function searchEurLexTool(input: SearchEurLexInput): Promise<string
     return lines.join("\n");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return `[EUR-Lex 검색 오류] ${message}`;
+    return `[오류] EUR-Lex 검색 실패: ${message}`;
   }
 }

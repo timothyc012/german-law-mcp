@@ -53,7 +53,7 @@ export async function searchAllTool(input: SearchAllInput): Promise<string> {
     return lines.join("\n");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return `[통합 검색 오류] ${message}`;
+    return `[오류] 통합 검색 실패: ${message}`;
   }
 }
 

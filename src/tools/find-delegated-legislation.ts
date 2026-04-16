@@ -125,6 +125,6 @@ export async function findDelegatedLegislation(input: FindDelegatedLegislationIn
     return lines.join("\n");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return `[위임법령 추적 오류] ${message}`;
+    return `[오류] 위임법령 추적 실패: ${message}`;
   }
 }
