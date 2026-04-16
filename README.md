@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 독일 연방법률 검색·분석을 위한 **Model Context Protocol (MCP) 서버**.  
-24개 도구로 법령 조문, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교(EUR-Lex 실시간), 위임체계 추적, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전까지 커버합니다.
+25개 도구로 법령 조문, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교(EUR-Lex 실시간), 위임체계 추적, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전, 리스크 조기 경고까지 커버합니다.
 
 ## 데이터 소스
 
@@ -16,7 +16,7 @@
 | [EUR-Lex CELLAR](https://publications.europa.eu/webapi/rdf/sparql) | EU 법령 실시간 메타데이터 (SPARQL API) | ✅ |
 | Wayback Machine | 법령 역사적 버전 조회 | ✅ |
 
-## 도구 목록 (24개)
+## 도구 목록 (25개)
 
 ### 기본 검색 (5개)
 
@@ -82,6 +82,12 @@
 |------|------|
 | `lookup_legal_term` | 독일 법률 용어 사전 — 40개 이상 용어, 한국어·영어 설명, 관련 조문, 퍼지 검색 |
 
+### 리스크 알림 (1개) — Phase 7
+
+| 도구 | 설명 |
+|------|------|
+| `risk_alert` | 사실관계 기반 리스크 조기 경고 — Verjährung 카운트다운, Frist 경고, 비용·관할 리스크 점검 |
+
 ## 설치
 
 ```bash
@@ -89,6 +95,21 @@ git clone https://github.com/your-org/german-law-mcp
 cd german-law-mcp
 npm install
 npm run build
+```
+
+## 검증 명령
+
+```bash
+npm run typecheck           # TypeScript 정적 검증
+npm run verify:regression   # 법적 정확성 회귀 가드
+npm run verify:docs         # README ↔ 등록 도구/스크립트 동기화 검사
+npm run verify              # 위 세 가지 안전 검증 묶음
+```
+
+선택적 실시간 법령 검증:
+
+```bash
+npm run verify:live-law     # GII 실시간 조회 기반 하드코딩 조문 spot-check
 ```
 
 ## MCP 클라이언트 설정
@@ -173,11 +194,20 @@ compare_de_eu({ thema: "Datenschutz", fokus: "abweichungen" })
 → DSGVO vs. BDSG 주요 차이점 + BVerfG/EuGH 핵심 판례
 ```
 
+### 리스크 조기 경고
+```
+risk_alert({
+  sachverhalt: "Käufer verlangt Rücktritt wegen Motorschaden 22 Monate nach Übergabe. Verkäufer bestreitet jeden Mangel.",
+  streitwert: 12000
+})
+→ 소멸시효 임박 여부, 입증책임, 소송비용·관할 리스크 요약
+```
+
 ## 아키텍처
 
 ```
 src/
-├── index.ts              # MCP 서버 진입점 (도구 24개 등록)
+├── index.ts              # MCP 서버 진입점 (도구 25개 등록)
 ├── lib/
 │   ├── neuris-client.ts      # NeuRIS API 클라이언트
 │   ├── gii-client.ts         # gesetze-im-internet.de 클라이언트
@@ -189,7 +219,7 @@ src/
 │   ├── cache.ts              # 응답 캐싱 (TTL 기반)
 │   ├── court-map.ts          # 법원 코드 매핑
 │   └── law-abbreviations.ts  # 법령 약어 데이터베이스 (50+)
-└── tools/                # 도구별 구현 (24개)
+└── tools/                # 도구별 구현 (25개)
     ├── search-law.ts
     ├── get-law-section.ts
     ├── search-case-law.ts
@@ -213,7 +243,8 @@ src/
     ├── quality-gate.ts           # Phase 4
     ├── search-state-law.ts       # Phase 5
     ├── get-state-law-section.ts  # Phase 5
-    └── lookup-legal-term.ts      # Phase 6 — 법률 용어 사전
+    ├── lookup-legal-term.ts      # Phase 6 — 법률 용어 사전
+    └── risk-alert.ts             # Phase 7 — 리스크 조기 경고
 ```
 
 이제 Phase 4와 Phase 5 사용 예시를 추가합니다.

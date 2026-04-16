@@ -9,6 +9,11 @@
   },
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "verify:regression": "node scripts/legal-regression-guard.mjs",
+    "verify:docs": "node scripts/check-doc-sync.mjs",
+    "verify:live-law": "node scripts/legal-verify.mjs",
+    "verify": "npm run typecheck && npm run verify:regression && npm run verify:docs",
     "start": "node dist/index.js",
     "dev": "tsc --watch"
   },
