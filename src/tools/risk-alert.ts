@@ -41,7 +41,23 @@ interface RiskAlert {
   deadline?: string;
 }
 
+const GERMAN_MONTHS: Record<string, number> = {
+  januar: 0, februar: 1, märz: 2, april: 3, mai: 4, juni: 5,
+  juli: 6, august: 7, september: 8, oktober: 9, november: 10, dezember: 11,
+};
+
 function extractDate(text: string): string | null {
+  // German month-name format: "15. März 2024" or "1. Januar 2023"
+  const m0 = text.match(/(\d{1,2})\.\s+([A-Za-zäöüÄÖÜ]+)\s+(\d{4})/);
+  if (m0) {
+    const monthName = m0[2].toLowerCase();
+    const monthIndex = GERMAN_MONTHS[monthName];
+    if (monthIndex !== undefined) {
+      const day = m0[1].padStart(2, "0");
+      const month = String(monthIndex + 1).padStart(2, "0");
+      return `${m0[3]}-${month}-${day}`;
+    }
+  }
   // DD.MM.YYYY format
   const m1 = text.match(/(\d{2})\.(\d{2})\.(\d{4})/);
   if (m1) {
@@ -55,11 +71,6 @@ function extractDate(text: string): string | null {
   return null;
 }
 
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
 
 function addYears(dateStr: string, years: number): string {
   const d = new Date(dateStr);
@@ -205,7 +216,12 @@ export async function riskAlert(input: RiskAlertInput): Promise<string> {
 
   const streitwertMatch = sachverhalt.match(/([\d.,]+)\s*(?:€|EUR|Euro)/);
   if (streitwertMatch) {
-    const streitwert = parseFloat(streitwertMatch[1].replace(/\./g, "").replace(",", "."));
+    const rawAmount = streitwertMatch[1].replace(/\./g, "");
+    const lastComma = rawAmount.lastIndexOf(",");
+    const normalized = lastComma !== -1
+      ? rawAmount.slice(0, lastComma) + "." + rawAmount.slice(lastComma + 1)
+      : rawAmount;
+    const streitwert = parseFloat(normalized);
     if (!isNaN(streitwert) && streitwert > 0) {
       const gerichtskostenAG = Math.round(streitwert * 0.03 + 25);
       const anwaltskosten = Math.round(streitwert * 0.08 + 50);

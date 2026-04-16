@@ -165,9 +165,22 @@ export function searchConceptMap(query: string): ConceptMatch[] {
     for (const keyword of entry.keywords) {
       const kw = keyword.toLowerCase();
 
+      // Phrase-level matching: if the query contains the keyword as a substring, score 1.0
+      if (kw.includes(" ") && lowerQuery.includes(kw)) {
+        if (1.0 > bestScore) {
+          bestScore = 1.0;
+          bestKeyword = keyword;
+        }
+        continue;
+      }
+
       for (const token of tokens) {
         if (kw.includes(token) || token.includes(kw)) {
-          const score = Math.min(token.length, kw.length) / Math.max(token.length, kw.length);
+          let score = Math.min(token.length, kw.length) / Math.max(token.length, kw.length);
+          // Penalize very short tokens (< 5 chars) to reduce noise
+          if (token.length < 5) {
+            score *= 0.7;
+          }
           if (score > bestScore) {
             bestScore = score;
             bestKeyword = keyword;
@@ -176,7 +189,7 @@ export function searchConceptMap(query: string): ConceptMatch[] {
       }
     }
 
-    if (bestScore >= 0.3) {
+    if (bestScore >= 0.5) {
       matches.push({ entry, score: bestScore, matchedKeyword: bestKeyword });
     }
   }
