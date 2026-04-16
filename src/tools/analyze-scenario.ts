@@ -305,149 +305,155 @@ export type AnalyzeScenarioInput = z.infer<typeof analyzeScenarioSchema>;
 // ── Hauptfunktion ─────────────────────────────────────────────────────────
 
 export async function analyzeScenario(input: AnalyzeScenarioInput): Promise<string> {
-  const lines: string[] = [];
+  try {
+    const lines: string[] = [];
 
-  const rechtsgebiete = erkenneRechtsgebiete(input.sachverhalt);
-  const ansprueche = erkenneAnsprueche(input.sachverhalt);
+    const rechtsgebiete = erkenneRechtsgebiete(input.sachverhalt);
+    const ansprueche = erkenneAnsprueche(input.sachverhalt);
 
-  lines.push("╔══════════════════════════════════════════════════════════╗");
-  lines.push("║          SACHVERHALTSANALYSE — Juristische Auswertung     ║");
-  lines.push("╚══════════════════════════════════════════════════════════╝");
-  lines.push("");
-  lines.push("  ⚠  WICHTIG: Kein Rechtsrat — nur Orientierungshilfe.");
-  lines.push("     Für verbindliche Auskunft: Anwalt oder Rechtsanwaltskammer");
-  lines.push("");
-
-  // Sachverhalt-Zusammenfassung
-  lines.push("  ── SACHVERHALT ───────────────────────────────────────────");
-  lines.push(`  ${input.sachverhalt.slice(0, 300)}${input.sachverhalt.length > 300 ? "..." : ""}`);
-  lines.push(`  Perspektive: ${input.perspektive}`);
-  lines.push("");
-
-  // Erkannte Rechtsgebiete
-  lines.push("  ── [1] ERKANNTE RECHTSGEBIETE ───────────────────────────");
-  if (rechtsgebiete.length === 0) {
-    lines.push("  (Keine eindeutigen Rechtsgebiete erkannt — Sachverhalt ggf. präzisieren)");
-  } else {
-    for (const rg of rechtsgebiete) {
-      lines.push(`  ✦ ${rg.name}`);
-      lines.push(`    Normen: ${rg.normen.join(", ")}`);
-    }
-  }
-  lines.push("");
-
-  // Anspruchsgrundlagen
-  lines.push("  ── [2] POTENZIELLE ANSPRUCHSGRUNDLAGEN ──────────────────");
-  lines.push("");
-
-  if (ansprueche.length === 0) {
-    lines.push("  (Keine Anspruchsmuster erkannt. Tipps:");
-    lines.push("   → Konkreteres Stichwort verwenden (z.B. 'Mietvertrag' statt 'Wohnung')");
-    lines.push("   → get_norm_context für Einzelnorm-Analyse verwenden)");
-  } else {
-    for (let i = 0; i < ansprueche.length; i++) {
-      const a = ansprueche[i];
-      const ampel = a.erfolgschance === "hoch" ? "🟢"
-        : a.erfolgschance === "mittel" ? "🟡"
-        : a.erfolgschance === "gering" ? "🔴" : "⚪";
-
-      lines.push(`  [${i + 1}] ${a.norm}`);
-      lines.push(`      ${ampel} Erfolgschance: ${a.erfolgschance.toUpperCase()}`);
-      lines.push(`      ${a.beschreibung}`);
-      lines.push("");
-      lines.push("      Voraussetzungen:");
-      for (const v of a.voraussetzungen) {
-        lines.push(`        ✓ ${v}`);
-      }
-      lines.push("");
-      lines.push("      Risiken / Einwände:");
-      for (const r of a.risiken) {
-        lines.push(`        ⚡ ${r}`);
-      }
-      lines.push("");
-    }
-  }
-
-  if (input.tiefe === "vollständig") {
-    // Beweislast-Analyse
-    lines.push("  ── [3] BEWEISLASTVERTEILUNG ─────────────────────────────");
-    lines.push("  Allgemeine Regel: Jede Partei beweist die Voraussetzungen");
-    lines.push("  der ihr günstigen Norm (§ 292 ZPO, Faustregel).");
+    lines.push("╔══════════════════════════════════════════════════════════╗");
+    lines.push("║          SACHVERHALTSANALYSE — Juristische Auswertung     ║");
+    lines.push("╚══════════════════════════════════════════════════════════╝");
+    lines.push("");
+    lines.push("  ⚠  WICHTIG: Kein Rechtsrat — nur Orientierungshilfe.");
+    lines.push("     Für verbindliche Auskunft: Anwalt oder Rechtsanwaltskammer");
     lines.push("");
 
-    const lower = input.sachverhalt.toLowerCase();
-    const isVerbrauchsgutkauf = ["kauf", "verkauft", "händler", "online", "bestellt", "auto", "fahrzeug", "gekauft", "ware"].some(w => lower.includes(w))
-      && ["mangel", "defekt", "kaputt", "reparatur", "fehler", "funktioniert nicht"].some(w => lower.includes(w));
+    // Sachverhalt-Zusammenfassung
+    lines.push("  ── SACHVERHALT ───────────────────────────────────────────");
+    lines.push(`  ${input.sachverhalt.slice(0, 300)}${input.sachverhalt.length > 300 ? "..." : ""}`);
+    lines.push(`  Perspektive: ${input.perspektive}`);
+    lines.push("");
 
-    if (isVerbrauchsgutkauf) {
-      lines.push("  ⚡ BESONDERE BEWEISLASTVERTEILUNG (Verbrauchsgüterkauf):");
-      lines.push("  § 477 Abs. 1 BGB — Beweislastumkehr:");
-      lines.push("  Zeigt sich innerhalb von 1 Jahr (12 Monate) nach Ablieferung ein Sachmangel,");
-      lines.push("  wird vermutet, dass der Mangel bereits bei Gefahrübergang vorlag.");
-      lines.push("  → Der Verkäufer muss beweisen, dass der Mangel nicht beim Verkauf bestand.");
-      lines.push("  (Seit 01.01.2022 — vor 2022 waren es 6 Monate, nur noch für Tiere.)");
-      lines.push("");
-      lines.push("  Voraussetzungen der Umkehr:");
-      lines.push("  ✓ Verbraucher als Käufer (§ 13 BGB)");
-      lines.push("  ✓ Unternehmer als Verkäufer (§ 14 BGB)");
-      lines.push("  ✓ Mangel zeigt sich innerhalb 1 Jahr nach Ablieferung");
-      lines.push("  ✓ Kein Ausschluss (§ 477 Abs. 1 S. 2 — z.B. unsachgemäße Verwendung)");
+    // Erkannte Rechtsgebiete
+    lines.push("  ── [1] ERKANNTE RECHTSGEBIETE ───────────────────────────");
+    if (rechtsgebiete.length === 0) {
+      lines.push("  (Keine eindeutigen Rechtsgebiete erkannt — Sachverhalt ggf. präzisieren)");
     } else {
-      lines.push("  Standardverteilung:");
-      lines.push("  → Kläger: Anspruchsvoraussetzungen (Tatbestandsmerkmale)");
-      lines.push("  → Beklagter: Einreden / Einwendungen (z.B. Verjährung, Erfüllung)");
+      for (const rg of rechtsgebiete) {
+        lines.push(`  ✦ ${rg.name}`);
+        lines.push(`    Normen: ${rg.normen.join(", ")}`);
+      }
     }
     lines.push("");
 
-    // Verteidigungsargumente (bei beklagter Perspektive oder neutral)
-    if (input.perspektive !== "kläger" && ansprueche.length > 0) {
-      lines.push("  ── [4] VERTEIDIGUNGSARGUMENTE ───────────────────────────");
-      lines.push("  Typische Gegenargumente des Beklagten:");
-      for (const a of ansprueche.slice(0, 2)) {
+    // Anspruchsgrundlagen
+    lines.push("  ── [2] POTENZIELLE ANSPRUCHSGRUNDLAGEN ──────────────────");
+    lines.push("");
+
+    if (ansprueche.length === 0) {
+      lines.push("  (Keine Anspruchsmuster erkannt. Tipps:");
+      lines.push("   → Konkreteres Stichwort verwenden (z.B. 'Mietvertrag' statt 'Wohnung')");
+      lines.push("   → get_norm_context für Einzelnorm-Analyse verwenden)");
+    } else {
+      for (let i = 0; i < ansprueche.length; i++) {
+        const a = ansprueche[i];
+        const ampel = a.erfolgschance === "hoch" ? "🟢"
+          : a.erfolgschance === "mittel" ? "🟡"
+          : a.erfolgschance === "gering" ? "🔴" : "⚪";
+
+        lines.push(`  [${i + 1}] ${a.norm}`);
+        lines.push(`      ${ampel} Erfolgschance: ${a.erfolgschance.toUpperCase()}`);
+        lines.push(`      ${a.beschreibung}`);
+        lines.push("");
+        lines.push("      Voraussetzungen:");
+        for (const v of a.voraussetzungen) {
+          lines.push(`        ✓ ${v}`);
+        }
+        lines.push("");
+        lines.push("      Risiken / Einwände:");
         for (const r of a.risiken) {
-          lines.push(`  → ${r}`);
+          lines.push(`        ⚡ ${r}`);
+        }
+        lines.push("");
+      }
+    }
+
+    if (input.tiefe === "vollständig") {
+      // Beweislast-Analyse
+      lines.push("  ── [3] BEWEISLASTVERTEILUNG ─────────────────────────────");
+      lines.push("  Allgemeine Regel: Jede Partei beweist die Voraussetzungen");
+      lines.push("  der ihr günstigen Norm (§ 292 ZPO, Faustregel).");
+      lines.push("");
+
+      const lower = input.sachverhalt.toLowerCase();
+      const isVerbrauchsgutkauf = ["kauf", "verkauft", "händler", "online", "bestellt", "auto", "fahrzeug", "gekauft", "ware"].some(w => lower.includes(w))
+        && ["mangel", "defekt", "kaputt", "reparatur", "fehler", "funktioniert nicht"].some(w => lower.includes(w));
+
+      if (isVerbrauchsgutkauf) {
+        lines.push("  ⚡ BESONDERE BEWEISLASTVERTEILUNG (Verbrauchsgüterkauf):");
+        lines.push("  § 477 Abs. 1 BGB — Beweislastumkehr:");
+        lines.push("  Zeigt sich innerhalb von 1 Jahr (12 Monate) nach Ablieferung ein Sachmangel,");
+        lines.push("  wird vermutet, dass der Mangel bereits bei Gefahrübergang vorlag.");
+        lines.push("  → Der Verkäufer muss beweisen, dass der Mangel nicht beim Verkauf bestand.");
+        lines.push("  (Seit 01.01.2022 — vor 2022 waren es 6 Monate, nur noch für Tiere.)");
+        lines.push("");
+        lines.push("  Voraussetzungen der Umkehr:");
+        lines.push("  ✓ Verbraucher als Käufer (§ 13 BGB)");
+        lines.push("  ✓ Unternehmer als Verkäufer (§ 14 BGB)");
+        lines.push("  ✓ Mangel zeigt sich innerhalb 1 Jahr nach Ablieferung");
+        lines.push("  ✓ Kein Ausschluss (§ 477 Abs. 1 S. 2 — z.B. unsachgemäße Verwendung)");
+      } else {
+        lines.push("  Standardverteilung:");
+        lines.push("  → Kläger: Anspruchsvoraussetzungen (Tatbestandsmerkmale)");
+        lines.push("  → Beklagter: Einreden / Einwendungen (z.B. Verjährung, Erfüllung)");
+      }
+      lines.push("");
+
+      // Verteidigungsargumente (bei beklagter Perspektive oder neutral)
+      if (input.perspektive !== "kläger" && ansprueche.length > 0) {
+        lines.push("  ── [4] VERTEIDIGUNGSARGUMENTE ───────────────────────────");
+        lines.push("  Typische Gegenargumente des Beklagten:");
+        for (const a of ansprueche.slice(0, 2)) {
+          for (const r of a.risiken) {
+            lines.push(`  → ${r}`);
+          }
+        }
+        lines.push("");
+      }
+
+      // Beweismittel
+      lines.push("  ── [5] WICHTIGE BEWEISMITTEL ────────────────────────────");
+      lines.push("  Allgemein relevante Dokumente:");
+      lines.push("  → Verträge, Rechnungen, Quittungen (Beweisdokumente)");
+      lines.push("  → Schriftverkehr (E-Mail, WhatsApp, Briefe)");
+      lines.push("  → Fotos / Videos von Schäden oder Zustand");
+      lines.push("  → Zeugen (Namen + Kontaktdaten sichern!)");
+      lines.push("  → Arzt-/Reparaturberichte, Sachverständigengutachten");
+      lines.push("");
+
+      // Verfahrensweg
+      lines.push("  ── [6] EMPFOHLENER VERFAHRENSWEG ────────────────────────");
+      lines.push(`  ${ermittleVerfahrensweg(rechtsgebiete)}`);
+      lines.push("");
+      lines.push("  Allgemeine Schritte:");
+      lines.push("  1. Außergerichtlich: Schriftliche Aufforderung mit Fristsetzung");
+      lines.push("  2. Schlichtung: ggf. Verbraucherschlichtung / Ombudsmann");
+      lines.push("  3. Gerichtlich: Mahnbescheid (schnell) oder Klage (genau)");
+      lines.push("  4. Vollstreckung: Pfändungs- und Überweisungsbeschluss");
+      lines.push("");
+
+      // Nächste Schritte
+      lines.push("  ── [7] NÄCHSTE SCHRITTE (MCP-Tools) ─────────────────────");
+      if (rechtsgebiete.length > 0) {
+        const erstesGesetz = rechtsgebiete[0].normen[0]?.match(/§§?\s*(\d+[a-z]?)\s+(\w+)/i);
+        if (erstesGesetz) {
+          lines.push(`  → get_norm_context: § ${erstesGesetz[1]} ${erstesGesetz[2]} — Normenumfeld`);
         }
       }
-      lines.push("");
+      lines.push("  → gutachten_scaffold: Rechtsgutachten-Gerüst erstellen");
+      lines.push("  → search_case_law: BGH-Urteile zu Ihrer Konstellation finden");
+      lines.push("  → search_state_courts: OLG/LG-Urteile (openjur.de)");
     }
 
-    // Beweismittel
-    lines.push("  ── [5] WICHTIGE BEWEISMITTEL ────────────────────────────");
-    lines.push("  Allgemein relevante Dokumente:");
-    lines.push("  → Verträge, Rechnungen, Quittungen (Beweisdokumente)");
-    lines.push("  → Schriftverkehr (E-Mail, WhatsApp, Briefe)");
-    lines.push("  → Fotos / Videos von Schäden oder Zustand");
-    lines.push("  → Zeugen (Namen + Kontaktdaten sichern!)");
-    lines.push("  → Arzt-/Reparaturberichte, Sachverständigengutachten");
-    lines.push("");
+    lines.push("  ═══════════════════════════════════════════════════════");
+    lines.push("  ⚖  Dieses Tool ersetzt keine Rechtsberatung.");
+    lines.push("  Anwaltsuche: https://www.anwaltauskunft.de");
 
-    // Verfahrensweg
-    lines.push("  ── [6] EMPFOHLENER VERFAHRENSWEG ────────────────────────");
-    lines.push(`  ${ermittleVerfahrensweg(rechtsgebiete)}`);
-    lines.push("");
-    lines.push("  Allgemeine Schritte:");
-    lines.push("  1. Außergerichtlich: Schriftliche Aufforderung mit Fristsetzung");
-    lines.push("  2. Schlichtung: ggf. Verbraucherschlichtung / Ombudsmann");
-    lines.push("  3. Gerichtlich: Mahnbescheid (schnell) oder Klage (genau)");
-    lines.push("  4. Vollstreckung: Pfändungs- und Überweisungsbeschluss");
-    lines.push("");
+    return lines.join("\n");
 
-    // Nächste Schritte
-    lines.push("  ── [7] NÄCHSTE SCHRITTE (MCP-Tools) ─────────────────────");
-    if (rechtsgebiete.length > 0) {
-      const erstesGesetz = rechtsgebiete[0].normen[0]?.match(/§§?\s*(\d+[a-z]?)\s+(\w+)/i);
-      if (erstesGesetz) {
-        lines.push(`  → get_norm_context: § ${erstesGesetz[1]} ${erstesGesetz[2]} — Normenumfeld`);
-      }
-    }
-    lines.push("  → gutachten_scaffold: Rechtsgutachten-Gerüst erstellen");
-    lines.push("  → search_case_law: BGH-Urteile zu Ihrer Konstellation finden");
-    lines.push("  → search_state_courts: OLG/LG-Urteile (openjur.de)");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `[오류] Sachverhaltsanalyse 실행 중 오류: ${message}`;
   }
-
-  lines.push("  ═══════════════════════════════════════════════════════");
-  lines.push("  ⚖  Dieses Tool ersetzt keine Rechtsberatung.");
-  lines.push("  Anwaltsuche: https://www.anwaltauskunft.de");
-
-  return lines.join("\n");
 }

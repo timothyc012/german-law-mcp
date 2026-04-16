@@ -161,90 +161,96 @@ export type CalculateRvgInput = z.infer<typeof calculateRvgSchema>;
 // ── Hauptfunktion ─────────────────────────────────────────────────────────
 
 export async function calculateRvg(input: CalculateRvgInput): Promise<string> {
-  const { streitwert, instanz, verfahren, mwst, nur_verfahrensgebuehr } = input;
+  try {
+    const { streitwert, instanz, verfahren, mwst, nur_verfahrensgebuehr } = input;
 
-  // Sonderfall Strafrecht: Tabelle nach § 49 RVG (Rahmengebühren), nicht § 13
-  if (verfahren === "strafrecht") {
-    return calculateStrafrechtlich(streitwert, instanz, mwst);
-  }
-
-  // Sonderfall Erstberatung Verbraucher
-  if (verfahren === "beratung") {
-    return calculateBeratung(streitwert, mwst);
-  }
-
-  // Normale Tabellen-Gebühr (§ 13 RVG)
-  const einheitCent = getGebuehreneinheit(streitwert);
-  const tatbestaende = GEBUEHRENTATBESTAENDE[verfahren] ?? GEBUEHRENTATBESTAENDE["streitig"];
-
-  const lines: string[] = [];
-  lines.push("═══════════════════════════════════════════════════════");
-  lines.push("  RVG-GEBÜHRENBERECHNUNG");
-  lines.push("═══════════════════════════════════════════════════════");
-  lines.push(`  Streitwert:  ${formatEuro(streitwert)}`);
-  lines.push(`  Instanz:     ${instanz}`);
-  lines.push(`  Verfahren:   ${verfahrenLabel(verfahren)}`);
-  lines.push(`  Gebühreneinheit (§ 13 RVG Anlage 2): ${formatEuroCent(einheitCent)}`);
-  lines.push("───────────────────────────────────────────────────────");
-
-  let gesamtNettoCent = 0;
-  const rows: Array<{ bezeichnung: string; vv: string; faktor: string; betrag: number }> = [];
-
-  for (const tb of tatbestaende) {
-    if (nur_verfahrensgebuehr && tb.name !== "Verfahrensgebühr" && !tb.name.startsWith("Verfahrensgebühr")) {
-      continue;
+    // Sonderfall Strafrecht: Tabelle nach § 49 RVG (Rahmengebühren), nicht § 13
+    if (verfahren === "strafrecht") {
+      return calculateStrafrechtlich(streitwert, instanz, mwst);
     }
-    if (tb.faktor === 0) continue; // Sonderfall Erstberatung separat
 
-    const betragCent = Math.round(einheitCent * tb.faktor);
-    gesamtNettoCent += betragCent;
-    rows.push({
-      bezeichnung: tb.name,
-      vv: tb.nummer,
-      faktor: tb.faktor.toFixed(1),
-      betrag: betragCent,
-    });
-  }
+    // Sonderfall Erstberatung Verbraucher
+    if (verfahren === "beratung") {
+      return calculateBeratung(streitwert, mwst);
+    }
 
-  // Tabelle ausgeben
-  const maxNameLen = Math.max(...rows.map((r) => r.bezeichnung.length), 20);
-  for (const row of rows) {
-    const name = row.bezeichnung.padEnd(maxNameLen);
-    lines.push(`  ${name}  ${row.vv}  ×${row.faktor}  ${formatEuroCent(row.betrag).padStart(10)}`);
-  }
+    // Normale Tabellen-Gebühr (§ 13 RVG)
+    const einheitCent = getGebuehreneinheit(streitwert);
+    const tatbestaende = GEBUEHRENTATBESTAENDE[verfahren] ?? GEBUEHRENTATBESTAENDE["streitig"];
 
-  lines.push("───────────────────────────────────────────────────────");
-
-  // Auslagen VV 7002
-  const auslagenCent = calcAuslagen(gesamtNettoCent);
-  lines.push(`  ${"Post-/Telekommunikationspauschale (VV 7002)".padEnd(maxNameLen)}  ${"".padStart(17)}  ${formatEuroCent(auslagenCent).padStart(10)}`);
-  gesamtNettoCent += auslagenCent;
-
-  lines.push("───────────────────────────────────────────────────────");
-  lines.push(`  ${"Zwischensumme (netto)".padEnd(maxNameLen + 23)}  ${formatEuroCent(gesamtNettoCent).padStart(10)}`);
-
-  if (mwst) {
-    const mwstCent = Math.round(gesamtNettoCent * 0.19);
-    const gesamtBruttoCent = gesamtNettoCent + mwstCent;
-    lines.push(`  ${"Umsatzsteuer 19% (VV 7008)".padEnd(maxNameLen + 23)}  ${formatEuroCent(mwstCent).padStart(10)}`);
+    const lines: string[] = [];
     lines.push("═══════════════════════════════════════════════════════");
-    lines.push(`  ${"GESAMT (brutto)".padEnd(maxNameLen + 23)}  ${formatEuroCent(gesamtBruttoCent).padStart(10)}`);
-  } else {
+    lines.push("  RVG-GEBÜHRENBERECHNUNG");
     lines.push("═══════════════════════════════════════════════════════");
-    lines.push(`  ${"GESAMT (netto)".padEnd(maxNameLen + 23)}  ${formatEuroCent(gesamtNettoCent).padStart(10)}`);
+    lines.push(`  Streitwert:  ${formatEuro(streitwert)}`);
+    lines.push(`  Instanz:     ${instanz}`);
+    lines.push(`  Verfahren:   ${verfahrenLabel(verfahren)}`);
+    lines.push(`  Gebühreneinheit (§ 13 RVG Anlage 2): ${formatEuroCent(einheitCent)}`);
+    lines.push("───────────────────────────────────────────────────────");
+
+    let gesamtNettoCent = 0;
+    const rows: Array<{ bezeichnung: string; vv: string; faktor: string; betrag: number }> = [];
+
+    for (const tb of tatbestaende) {
+      if (nur_verfahrensgebuehr && tb.name !== "Verfahrensgebühr" && !tb.name.startsWith("Verfahrensgebühr")) {
+        continue;
+      }
+      if (tb.faktor === 0) continue; // Sonderfall Erstberatung separat
+
+      const betragCent = Math.round(einheitCent * tb.faktor);
+      gesamtNettoCent += betragCent;
+      rows.push({
+        bezeichnung: tb.name,
+        vv: tb.nummer,
+        faktor: tb.faktor.toFixed(1),
+        betrag: betragCent,
+      });
+    }
+
+    // Tabelle ausgeben
+    const maxNameLen = Math.max(...rows.map((r) => r.bezeichnung.length), 20);
+    for (const row of rows) {
+      const name = row.bezeichnung.padEnd(maxNameLen);
+      lines.push(`  ${name}  ${row.vv}  ×${row.faktor}  ${formatEuroCent(row.betrag).padStart(10)}`);
+    }
+
+    lines.push("───────────────────────────────────────────────────────");
+
+    // Auslagen VV 7002
+    const auslagenCent = calcAuslagen(gesamtNettoCent);
+    lines.push(`  ${"Post-/Telekommunikationspauschale (VV 7002)".padEnd(maxNameLen)}  ${"".padStart(17)}  ${formatEuroCent(auslagenCent).padStart(10)}`);
+    gesamtNettoCent += auslagenCent;
+
+    lines.push("───────────────────────────────────────────────────────");
+    lines.push(`  ${"Zwischensumme (netto)".padEnd(maxNameLen + 23)}  ${formatEuroCent(gesamtNettoCent).padStart(10)}`);
+
+    if (mwst) {
+      const mwstCent = Math.round(gesamtNettoCent * 0.19);
+      const gesamtBruttoCent = gesamtNettoCent + mwstCent;
+      lines.push(`  ${"Umsatzsteuer 19% (VV 7008)".padEnd(maxNameLen + 23)}  ${formatEuroCent(mwstCent).padStart(10)}`);
+      lines.push("═══════════════════════════════════════════════════════");
+      lines.push(`  ${"GESAMT (brutto)".padEnd(maxNameLen + 23)}  ${formatEuroCent(gesamtBruttoCent).padStart(10)}`);
+    } else {
+      lines.push("═══════════════════════════════════════════════════════");
+      lines.push(`  ${"GESAMT (netto)".padEnd(maxNameLen + 23)}  ${formatEuroCent(gesamtNettoCent).padStart(10)}`);
+    }
+
+    lines.push("");
+    lines.push("  Hinweise:");
+    lines.push("  • Gebühren nach RVG i.d.F. Kostenrechtsänderungsgesetz 2021");
+    lines.push("  • Einigungsgebühr fällt nur bei tatsächlichem Vergleich an");
+    lines.push("  • Terminsgebühr fällt nur bei Wahrnehmung eines Termins an");
+    lines.push("  • Mehrere Auftraggeber: Erhöhungsgebühr VV 1008 ggf. anwendbar");
+    lines.push("  • Strafrecht/Sozialrecht: Rahmengebühren nach § 14 RVG");
+    lines.push("");
+    lines.push("  Rechtsgrundlagen: §§ 13, 14 RVG; VV RVG Nrn. 1000, 3100, 3104, 7002, 7008");
+
+    return lines.join("\n");
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `[오류] RVG-Berechnung 실행 중 오류: ${message}`;
   }
-
-  lines.push("");
-  lines.push("  Hinweise:");
-  lines.push("  • Gebühren nach RVG i.d.F. Kostenrechtsänderungsgesetz 2021");
-  lines.push("  • Einigungsgebühr fällt nur bei tatsächlichem Vergleich an");
-  lines.push("  • Terminsgebühr fällt nur bei Wahrnehmung eines Termins an");
-  lines.push("  • Mehrere Auftraggeber: Erhöhungsgebühr VV 1008 ggf. anwendbar");
-  lines.push("  • Strafrecht/Sozialrecht: Rahmengebühren nach § 14 RVG");
-  lines.push("");
-  lines.push("  Rechtsgrundlagen: §§ 13, 14 RVG; VV RVG Nrn. 1000, 3100, 3104, 7002, 7008");
-
-  return lines.join("\n");
 }
 
 // ── Strafrecht (Rahmengebühren § 49 RVG) ─────────────────────────────────

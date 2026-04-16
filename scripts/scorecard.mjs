@@ -296,7 +296,7 @@ function parseEdgeCaseMetric() {
 function parseArchitectureMetric() {
   const toolFiles = walkFiles(TOOL_DIR).filter((filePath) => extname(filePath) === ".ts");
   const tryCatchRegex = /try\s*\{[\s\S]*?catch\s*(?:\([^)]*\))?\s*\{/;
-  const errorMarkerRegex = /(\[검색 오류\]|\[오류\]|\[검색 실패\]|오류:|실패:|찾을 수 없)/;
+  const errorMarkerRegex = /(\[검색 오류\]|\[오류\]|\[검색 실패\]|오류:|실패:|찾을 수 없|Fehler:|fehlgeschlagen|nicht verfügbar|nicht abrufbar|nicht gefunden)/;
 
   let tryCatchCount = 0;
   let errorMarkerCount = 0;

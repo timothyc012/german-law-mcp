@@ -328,6 +328,12 @@ export type SpotIssuesInput = z.infer<typeof spotIssuesSchema>;
 // ── Hauptfunktion ─────────────────────────────────────────────────────────
 
 export async function spotIssues(input: SpotIssuesInput): Promise<string> {
-  const issues = erkenneIssues(input.sachverhalt, input.rechtsgebiet);
-  return formatIssueReport(input.sachverhalt, issues);
+  try {
+    const issues = erkenneIssues(input.sachverhalt, input.rechtsgebiet);
+    return formatIssueReport(input.sachverhalt, issues);
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `[오류] Issue-Analyse 실행 중 오류: ${message}`;
+  }
 }

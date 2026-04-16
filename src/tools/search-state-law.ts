@@ -41,65 +41,71 @@ const STATE_EMOJI: Partial<Record<StateCode, string>> = {
 };
 
 export async function searchStateLaw(input: SearchStateLawInput): Promise<string> {
-  const { query, state, category, size } = input;
+  try {
+    const { query, state, category, size } = input;
 
-  const lines: string[] = [
-    "[독일 주법(Landesrecht) 검색]",
-    [
-      query ? `검색어: "${query}"` : null,
-      state ? `주: ${STATE_NAMES[state as StateCode]}` : "전체 주",
-      category ? `분야: ${CATEGORY_LABELS[category] ?? category}` : null,
-    ].filter(Boolean).join(" | "),
-    "",
-  ];
+    const lines: string[] = [
+      "[독일 주법(Landesrecht) 검색]",
+      [
+        query ? `검색어: "${query}"` : null,
+        state ? `주: ${STATE_NAMES[state as StateCode]}` : "전체 주",
+        category ? `분야: ${CATEGORY_LABELS[category] ?? category}` : null,
+      ].filter(Boolean).join(" | "),
+      "",
+    ];
 
-  const { results, totalFound } = searchStateLaws({
-    query,
-    state: state as StateCode | undefined,
-    category,
-    limit: size,
-  });
+    const { results, totalFound } = searchStateLaws({
+      query,
+      state: state as StateCode | undefined,
+      category,
+      limit: size,
+    });
 
-  if (results.length === 0) {
-    lines.push("검색 결과가 없습니다.");
-    lines.push("");
-    lines.push("힌트:");
-    lines.push("  • 검색어를 독일어로 입력하세요 (예: 'Polizei', 'Bau', 'Schule')");
-    lines.push("  • category 필터를 사용하세요 (police, building, data, education 등)");
-    lines.push("  • state 필터를 제거하고 전체 주에서 검색해보세요");
-    return lines.join("\n");
-  }
-
-  lines.push(`총 ${totalFound}건 (표시: ${results.length}건)`);
-  lines.push("");
-
-  // 주별 그룹핑
-  const grouped: Partial<Record<StateCode, typeof results>> = {};
-  for (const r of results) {
-    if (!grouped[r.state]) grouped[r.state] = [];
-    grouped[r.state]!.push(r);
-  }
-
-  for (const [stateCode, stateResults] of Object.entries(grouped)) {
-    const sc = stateCode as StateCode;
-    const emoji = STATE_EMOJI[sc] ?? "📋";
-    lines.push(`${emoji} ${STATE_NAMES[sc]} (${stateCode})`);
-    lines.push(`   포털: ${STATE_PORTALS[sc]}`);
-    lines.push("");
-
-    for (const law of stateResults!) {
-      const catLabel = CATEGORY_LABELS[law.category] ?? law.category;
-      lines.push(`  📄 ${law.abbreviation}`);
-      lines.push(`     ${law.fullName}`);
-      lines.push(`     분야: ${catLabel}`);
-      lines.push(`     URL: ${law.url}`);
+    if (results.length === 0) {
+      lines.push("검색 결과가 없습니다.");
       lines.push("");
+      lines.push("힌트:");
+      lines.push("  • 검색어를 독일어로 입력하세요 (예: 'Polizei', 'Bau', 'Schule')");
+      lines.push("  • category 필터를 사용하세요 (police, building, data, education 등)");
+      lines.push("  • state 필터를 제거하고 전체 주에서 검색해보세요");
+      return lines.join("\n");
     }
+
+    lines.push(`총 ${totalFound}건 (표시: ${results.length}건)`);
+    lines.push("");
+
+    // 주별 그룹핑
+    const grouped: Partial<Record<StateCode, typeof results>> = {};
+    for (const r of results) {
+      if (!grouped[r.state]) grouped[r.state] = [];
+      grouped[r.state]!.push(r);
+    }
+
+    for (const [stateCode, stateResults] of Object.entries(grouped)) {
+      const sc = stateCode as StateCode;
+      const emoji = STATE_EMOJI[sc] ?? "📋";
+      lines.push(`${emoji} ${STATE_NAMES[sc]} (${stateCode})`);
+      lines.push(`   포털: ${STATE_PORTALS[sc]}`);
+      lines.push("");
+
+      for (const law of stateResults!) {
+        const catLabel = CATEGORY_LABELS[law.category] ?? law.category;
+        lines.push(`  📄 ${law.abbreviation}`);
+        lines.push(`     ${law.fullName}`);
+        lines.push(`     분야: ${catLabel}`);
+        lines.push(`     URL: ${law.url}`);
+        lines.push("");
+      }
+    }
+
+    lines.push("─".repeat(50));
+    lines.push("💡 조문 원문 조회: get_state_law_section 도구 사용");
+    lines.push("   (Bayern은 실시간 파싱, 그 외 주는 URL 안내)");
+
+    return lines.join("\n");
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `[오류] Landesrecht-Suche 실행 중 오류: ${message}`;
   }
-
-  lines.push("─".repeat(50));
-  lines.push("💡 조문 원문 조회: get_state_law_section 도구 사용");
-  lines.push("   (Bayern은 실시간 파싱, 그 외 주는 URL 안내)");
-
-  return lines.join("\n");
 }

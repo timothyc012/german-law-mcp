@@ -469,22 +469,84 @@ export type CalculateFristInput = z.infer<typeof calculateFristSchema>;
 // ── Hauptfunktion ─────────────────────────────────────────────────────────
 
 export async function calculateFrist(input: CalculateFristInput): Promise<string> {
-  const { fristtyp, ereignisdatum, bundesland, alle_fristen } = input;
+  try {
+    const { fristtyp, ereignisdatum, bundesland, alle_fristen } = input;
 
-  const def = FRISTTYPEN[fristtyp];
-  if (!def) {
-    return `Unbekannter Fristtyp: ${fristtyp}`;
-  }
+    const def = FRISTTYPEN[fristtyp];
+    if (!def) {
+      return `Unbekannter Fristtyp: ${fristtyp}`;
+    }
 
-  const startDatum = parseIsoCalendarDate(ereignisdatum);
-  if (!startDatum) {
-    return `Ungültiges Datum: ${ereignisdatum}`;
-  }
+    const startDatum = parseIsoCalendarDate(ereignisdatum);
+    if (!startDatum) {
+      return `Ungültiges Datum: ${ereignisdatum}`;
+    }
 
-  if (fristtyp === "kuendigung_mietvertrag_vermieter") {
+    if (fristtyp === "kuendigung_mietvertrag_vermieter") {
+      const lines: string[] = [];
+      const dritteWerktag = getDritterWerktagDesMonats(startDatum.getFullYear(), startDatum.getMonth(), bundesland);
+
+      lines.push("═══════════════════════════════════════════════════════");
+      lines.push("  FRISTENBERECHNUNG");
+      lines.push("═══════════════════════════════════════════════════════");
+      lines.push(`  Fristtyp:       ${def.bezeichnung}`);
+      lines.push(`  Rechtsgrundlage: ${def.gesetz}`);
+      lines.push(`  Bundesland:     ${BUNDESLAND_NAMEN[bundesland] ?? bundesland}`);
+      lines.push("");
+      lines.push(`  Ereignisdatum:  ${formatDatum(startDatum)}`);
+      lines.push("  Fristlänge:     gesetzlich 3 / 6 / 9 Monate je nach Mietdauer");
+      lines.push("");
+      lines.push("───────────────────────────────────────────────────────");
+      lines.push("  ⚠  KEIN EXAKTES DATUM AUSGEGEBEN");
+      lines.push("  Die gesetzliche Kündigungsfrist des Vermieters hängt von der Mietdauer ab.");
+      lines.push("  Dieses Tool erhebt die Mietdauer nicht und gibt deshalb bewusst kein präzises Vertragsende aus.");
+      lines.push("");
+      lines.push(`  Maßgebliche Zugangsschwelle in diesem Monat: ${formatDatum(dritteWerktag)} (3. Werktag)`);
+      lines.push("  Für eine belastbare Berechnung müssen zusätzlich geprüft werden:");
+      lines.push("  • Mietdauer (3 / 6 / 9 Monate nach § 573c Abs. 1 S. 2 BGB)");
+      lines.push("  • Zugang bis zum 3. Werktag des Monats");
+      lines.push("  • Sonderregeln, Kündigungsausschlüsse und Vertragsgestaltung");
+      lines.push("");
+      lines.push("  Haftungshinweis: Diese Berechnung ersetzt keine anwaltliche");
+      lines.push("  Fristenkontrolle. Bitte stets in der Kanzleisoftware nachtragen.");
+
+      return lines.join("\n");
+    }
+
+    // Rohes Fristende berechnen
+    // § 199 Abs. 1 BGB: Regelverjährung beginnt mit dem Ende des Jahres der Anspruchsentstehung
+    let rohesFristende: Date;
+    let verschobenesFristende: Date;
+    let wurdeVerschoben = false;
+    let mietkuendigungHinweise: string[] = [];
+
+    if (fristtyp === "verjährung_allgemein") {
+      const jahrKenntnis = startDatum.getFullYear();
+      const endYear = jahrKenntnis + Math.floor(def.laenge.wert / 12);
+      rohesFristende = new Date(endYear, 11, 31);
+      verschobenesFristende = verschiebeAufWerktag(rohesFristende, bundesland);
+      wurdeVerschoben = toIsoDate(rohesFristende) !== toIsoDate(verschobenesFristende);
+    } else if (fristtyp === "kuendigung_mietvertrag_mieter") {
+      const mietende = berechneMietkuendigungMonatsende(startDatum, bundesland, def.laenge.wert);
+      rohesFristende = mietende.fristende;
+      verschobenesFristende = rohesFristende;
+      mietkuendigungHinweise = [
+        `Zugang bis zum 3. Werktag dieses Monats: ${formatDatum(mietende.dritterWerktag)}.`,
+        mietende.laufenderMonatZaehlt
+          ? "Der laufende Monat zählt noch mit; das Vertragsende wurde daher zum Ablauf des übernächsten Monats berechnet."
+          : "Der Zugang lag nach dem 3. Werktag; der laufende Monat zählt daher nicht mehr mit.",
+        "Für Mietkündigungen wird das Vertragsende als Monatsende berechnet; eine Verschiebung nach § 193 BGB findet hierfür nicht statt.",
+      ];
+    } else {
+      rohesFristende = berechneFristende(startDatum, def.laenge);
+      verschobenesFristende = verschiebeAufWerktag(rohesFristende, bundesland);
+      wurdeVerschoben = toIsoDate(rohesFristende) !== toIsoDate(verschobenesFristende);
+    }
+
+    const feiertage = getFeiertageDates(rohesFristende.getFullYear(), bundesland);
+    const istFeiertag = feiertage.has(toIsoDate(rohesFristende));
+
     const lines: string[] = [];
-    const dritteWerktag = getDritterWerktagDesMonats(startDatum.getFullYear(), startDatum.getMonth(), bundesland);
-
     lines.push("═══════════════════════════════════════════════════════");
     lines.push("  FRISTENBERECHNUNG");
     lines.push("═══════════════════════════════════════════════════════");
@@ -493,136 +555,80 @@ export async function calculateFrist(input: CalculateFristInput): Promise<string
     lines.push(`  Bundesland:     ${BUNDESLAND_NAMEN[bundesland] ?? bundesland}`);
     lines.push("");
     lines.push(`  Ereignisdatum:  ${formatDatum(startDatum)}`);
-    lines.push("  Fristlänge:     gesetzlich 3 / 6 / 9 Monate je nach Mietdauer");
+    lines.push(`  Fristlänge:     ${def.laenge.wert} ${einheitLabel(def.laenge.einheit)}`);
     lines.push("");
     lines.push("───────────────────────────────────────────────────────");
-    lines.push("  ⚠  KEIN EXAKTES DATUM AUSGEGEBEN");
-    lines.push("  Die gesetzliche Kündigungsfrist des Vermieters hängt von der Mietdauer ab.");
-    lines.push("  Dieses Tool erhebt die Mietdauer nicht und gibt deshalb bewusst kein präzises Vertragsende aus.");
+
+    if (wurdeVerschoben) {
+      lines.push(`  Rechnerisches Fristende: ${formatDatum(rohesFristende)}`);
+      const grund = istWochenende(rohesFristende)
+        ? (rohesFristende.getDay() === 6 ? "Samstag" : "Sonntag")
+        : istFeiertag
+          ? `gesetzlicher Feiertag in ${BUNDESLAND_NAMEN[bundesland]}`
+          : "Nicht-Werktag";
+      lines.push(`  ⚠  ${grund} → Verschiebung gem. § 193 BGB / § 222 Abs. 2 ZPO`);
+      lines.push("");
+      lines.push(`  ✅ FRISTENDE (wirksam): ${formatDatum(verschobenesFristende)}`);
+    } else {
+      lines.push(`  ✅ ${fristtyp === "kuendigung_mietvertrag_mieter" ? "VERTRAGSENDE" : "FRISTENDE"}: ${formatDatum(verschobenesFristende)}`);
+    }
+
     lines.push("");
-    lines.push(`  Maßgebliche Zugangsschwelle in diesem Monat: ${formatDatum(dritteWerktag)} (3. Werktag)`);
-    lines.push("  Für eine belastbare Berechnung müssen zusätzlich geprüft werden:");
-    lines.push("  • Mietdauer (3 / 6 / 9 Monate nach § 573c Abs. 1 S. 2 BGB)");
-    lines.push("  • Zugang bis zum 3. Werktag des Monats");
-    lines.push("  • Sonderregeln, Kündigungsausschlüsse und Vertragsgestaltung");
+    lines.push("───────────────────────────────────────────────────────");
+    lines.push("  Erläuterung:");
+    lines.push(`  ${def.beschreibung}`);
+
+    if (def.fristwahrung_hinweis) {
+      lines.push("");
+      lines.push("  ⚠  HINWEIS:");
+      lines.push(`  ${def.fristwahrung_hinweis}`);
+    }
+
+    if (mietkuendigungHinweise.length > 0) {
+      lines.push("");
+      lines.push("  ⚠  MIETRECHTLICHE EINORDNUNG:");
+      for (const hinweis of mietkuendigungHinweise) {
+        lines.push(`  ${hinweis}`);
+      }
+    }
+
+    // Folgefristen
+    if (alle_fristen) {
+      lines.push("");
+      lines.push("───────────────────────────────────────────────────────");
+      lines.push("  FOLGEFRISTEN:");
+      const folge = getFolgefristen(fristtyp, startDatum, bundesland);
+      for (const f of folge) {
+        lines.push(`  • ${f.bezeichnung} (${f.gesetz}): ${formatDatum(f.datum)}`);
+      }
+    }
+
+    // Verbleibende Tage
+    const heute = new Date();
+    heute.setHours(0, 0, 0, 0);
+    const diffMs = verschobenesFristende.getTime() - heute.getTime();
+    const diffTage = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    lines.push("");
+    lines.push("───────────────────────────────────────────────────────");
+    if (diffTage > 0) {
+      lines.push(`  ⏱  Verbleibende Zeit: ${diffTage} Tag${diffTage === 1 ? "" : "e"}`);
+    } else if (diffTage === 0) {
+      lines.push("  🚨 FRIST LÄUFT HEUTE AB!");
+    } else {
+      lines.push(`  ❌ FRIST ABGELAUFEN vor ${Math.abs(diffTage)} Tag${Math.abs(diffTage) === 1 ? "" : "en"}`);
+    }
+
     lines.push("");
     lines.push("  Haftungshinweis: Diese Berechnung ersetzt keine anwaltliche");
     lines.push("  Fristenkontrolle. Bitte stets in der Kanzleisoftware nachtragen.");
 
     return lines.join("\n");
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `[오류] Fristenberechnung 실행 중 오류: ${message}`;
   }
-
-  // Rohes Fristende berechnen
-  // § 199 Abs. 1 BGB: Regelverjährung beginnt mit dem Ende des Jahres der Anspruchsentstehung
-  let rohesFristende: Date;
-  let verschobenesFristende: Date;
-  let wurdeVerschoben = false;
-  let mietkuendigungHinweise: string[] = [];
-
-  if (fristtyp === "verjährung_allgemein") {
-    const jahrKenntnis = startDatum.getFullYear();
-    const endYear = jahrKenntnis + Math.floor(def.laenge.wert / 12);
-    rohesFristende = new Date(endYear, 11, 31);
-    verschobenesFristende = verschiebeAufWerktag(rohesFristende, bundesland);
-    wurdeVerschoben = toIsoDate(rohesFristende) !== toIsoDate(verschobenesFristende);
-  } else if (fristtyp === "kuendigung_mietvertrag_mieter") {
-    const mietende = berechneMietkuendigungMonatsende(startDatum, bundesland, def.laenge.wert);
-    rohesFristende = mietende.fristende;
-    verschobenesFristende = rohesFristende;
-    mietkuendigungHinweise = [
-      `Zugang bis zum 3. Werktag dieses Monats: ${formatDatum(mietende.dritterWerktag)}.`,
-      mietende.laufenderMonatZaehlt
-        ? "Der laufende Monat zählt noch mit; das Vertragsende wurde daher zum Ablauf des übernächsten Monats berechnet."
-        : "Der Zugang lag nach dem 3. Werktag; der laufende Monat zählt daher nicht mehr mit.",
-      "Für Mietkündigungen wird das Vertragsende als Monatsende berechnet; eine Verschiebung nach § 193 BGB findet hierfür nicht statt.",
-    ];
-  } else {
-    rohesFristende = berechneFristende(startDatum, def.laenge);
-    verschobenesFristende = verschiebeAufWerktag(rohesFristende, bundesland);
-    wurdeVerschoben = toIsoDate(rohesFristende) !== toIsoDate(verschobenesFristende);
-  }
-
-  const feiertage = getFeiertageDates(rohesFristende.getFullYear(), bundesland);
-  const istFeiertag = feiertage.has(toIsoDate(rohesFristende));
-
-  const lines: string[] = [];
-  lines.push("═══════════════════════════════════════════════════════");
-  lines.push("  FRISTENBERECHNUNG");
-  lines.push("═══════════════════════════════════════════════════════");
-  lines.push(`  Fristtyp:       ${def.bezeichnung}`);
-  lines.push(`  Rechtsgrundlage: ${def.gesetz}`);
-  lines.push(`  Bundesland:     ${BUNDESLAND_NAMEN[bundesland] ?? bundesland}`);
-  lines.push("");
-  lines.push(`  Ereignisdatum:  ${formatDatum(startDatum)}`);
-  lines.push(`  Fristlänge:     ${def.laenge.wert} ${einheitLabel(def.laenge.einheit)}`);
-  lines.push("");
-  lines.push("───────────────────────────────────────────────────────");
-
-  if (wurdeVerschoben) {
-    lines.push(`  Rechnerisches Fristende: ${formatDatum(rohesFristende)}`);
-    const grund = istWochenende(rohesFristende)
-      ? (rohesFristende.getDay() === 6 ? "Samstag" : "Sonntag")
-      : istFeiertag
-        ? `gesetzlicher Feiertag in ${BUNDESLAND_NAMEN[bundesland]}`
-        : "Nicht-Werktag";
-    lines.push(`  ⚠  ${grund} → Verschiebung gem. § 193 BGB / § 222 Abs. 2 ZPO`);
-    lines.push("");
-    lines.push(`  ✅ FRISTENDE (wirksam): ${formatDatum(verschobenesFristende)}`);
-  } else {
-    lines.push(`  ✅ ${fristtyp === "kuendigung_mietvertrag_mieter" ? "VERTRAGSENDE" : "FRISTENDE"}: ${formatDatum(verschobenesFristende)}`);
-  }
-
-  lines.push("");
-  lines.push("───────────────────────────────────────────────────────");
-  lines.push("  Erläuterung:");
-  lines.push(`  ${def.beschreibung}`);
-
-  if (def.fristwahrung_hinweis) {
-    lines.push("");
-    lines.push("  ⚠  HINWEIS:");
-    lines.push(`  ${def.fristwahrung_hinweis}`);
-  }
-
-  if (mietkuendigungHinweise.length > 0) {
-    lines.push("");
-    lines.push("  ⚠  MIETRECHTLICHE EINORDNUNG:");
-    for (const hinweis of mietkuendigungHinweise) {
-      lines.push(`  ${hinweis}`);
-    }
-  }
-
-  // Folgefristen
-  if (alle_fristen) {
-    lines.push("");
-    lines.push("───────────────────────────────────────────────────────");
-    lines.push("  FOLGEFRISTEN:");
-    const folge = getFolgefristen(fristtyp, startDatum, bundesland);
-    for (const f of folge) {
-      lines.push(`  • ${f.bezeichnung} (${f.gesetz}): ${formatDatum(f.datum)}`);
-    }
-  }
-
-  // Verbleibende Tage
-  const heute = new Date();
-  heute.setHours(0, 0, 0, 0);
-  const diffMs = verschobenesFristende.getTime() - heute.getTime();
-  const diffTage = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-  lines.push("");
-  lines.push("───────────────────────────────────────────────────────");
-  if (diffTage > 0) {
-    lines.push(`  ⏱  Verbleibende Zeit: ${diffTage} Tag${diffTage === 1 ? "" : "e"}`);
-  } else if (diffTage === 0) {
-    lines.push("  🚨 FRIST LÄUFT HEUTE AB!");
-  } else {
-    lines.push(`  ❌ FRIST ABGELAUFEN vor ${Math.abs(diffTage)} Tag${Math.abs(diffTage) === 1 ? "" : "en"}`);
-  }
-
-  lines.push("");
-  lines.push("  Haftungshinweis: Diese Berechnung ersetzt keine anwaltliche");
-  lines.push("  Fristenkontrolle. Bitte stets in der Kanzleisoftware nachtragen.");
-
-  return lines.join("\n");
 }
 
 // ── Folgefristen ──────────────────────────────────────────────────────────

@@ -696,39 +696,45 @@ function formatEntry(
 export async function lookupLegalTerm(
   input: LookupLegalTermInput,
 ): Promise<string> {
-  const lines: string[] = [];
-  const results = searchDictionary(input.term);
+  try {
+    const lines: string[] = [];
+    const results = searchDictionary(input.term);
 
-  if (results.length === 0) {
-    lines.push(`Rechtswörterbuch — Suche: "${input.term}"`);
-    lines.push("━".repeat(50));
-    lines.push("");
-    lines.push("  Kein Eintrag gefunden.");
-    lines.push("");
-    lines.push("  Verfügbare Kategorien:");
-    lines.push("  • 민법 / Kaufrecht: Sachmangel, Verjährung, Rücktritt, Minderung ...");
-    lines.push("  • 절차법 / ZPO: Klage, Urteil, Berufung, Revision ...");
-    lines.push("  • 형법 / StGB: Tatbestand, Vorsatz, Täter ...");
-    lines.push("  • 방법론: Gutachtenstil, Obersatz, Subsumtion ...");
-    lines.push("");
-    lines.push(`  Tipp: Suchanfrage auf Deutsch eingeben (z.B. "Sachmangel", "Verzug").`);
-    return lines.join("\n");
-  }
-
-  // 최상위 결과 표시
-  const primary = results[0];
-  lines.push(formatEntry(primary.entry, input.language));
-
-  // 유사 용어 제안 (상위 3개 추가)
-  const suggestions = results.slice(1, 4);
-  if (suggestions.length > 0) {
-    lines.push("");
-    lines.push("  ─────────────────────────────────────────────────────────");
-    lines.push("  유사 용어 (Ähnliche Begriffe):");
-    for (const s of suggestions) {
-      lines.push(`  → ${s.entry.term} — ${s.entry.ko} / ${s.entry.en}`);
+    if (results.length === 0) {
+      lines.push(`Rechtswörterbuch — Suche: "${input.term}"`);
+      lines.push("━".repeat(50));
+      lines.push("");
+      lines.push("  Kein Eintrag gefunden.");
+      lines.push("");
+      lines.push("  Verfügbare Kategorien:");
+      lines.push("  • 민법 / Kaufrecht: Sachmangel, Verjährung, Rücktritt, Minderung ...");
+      lines.push("  • 절차법 / ZPO: Klage, Urteil, Berufung, Revision ...");
+      lines.push("  • 형법 / StGB: Tatbestand, Vorsatz, Täter ...");
+      lines.push("  • 방법론: Gutachtenstil, Obersatz, Subsumtion ...");
+      lines.push("");
+      lines.push(`  Tipp: Suchanfrage auf Deutsch eingeben (z.B. "Sachmangel", "Verzug").`);
+      return lines.join("\n");
     }
-  }
 
-  return lines.join("\n");
+    // 최상위 결과 표시
+    const primary = results[0];
+    lines.push(formatEntry(primary.entry, input.language));
+
+    // 유사 용어 제안 (상위 3개 추가)
+    const suggestions = results.slice(1, 4);
+    if (suggestions.length > 0) {
+      lines.push("");
+      lines.push("  ─────────────────────────────────────────────────────────");
+      lines.push("  유사 용어 (Ähnliche Begriffe):");
+      for (const s of suggestions) {
+        lines.push(`  → ${s.entry.term} — ${s.entry.ko} / ${s.entry.en}`);
+      }
+    }
+
+    return lines.join("\n");
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `[오류] Rechtswörterbuch 실행 중 오류: ${message}`;
+  }
 }

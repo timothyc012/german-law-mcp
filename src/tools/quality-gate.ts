@@ -408,77 +408,83 @@ const GATES: Gate[] = [
 // ── 도구 구현 ────────────────────────────────────────────────────────────────
 
 export async function qualityGate(input: QualityGateInput): Promise<string> {
-  const { law, section, analysis_text, strict } = input;
+  try {
+    const { law, section, analysis_text, strict } = input;
 
-  const ctx: GateContext = { law, section, analysis_text, strict };
+    const ctx: GateContext = { law, section, analysis_text, strict };
 
-  const lines: string[] = [
-    `[품질 게이트 검증 — ${law}${section ? ` § ${section}` : ""}]`,
-    `모드: ${strict ? "엄격(Strict)" : "표준(Standard)"} | 기준일: ${new Date().toISOString().slice(0, 10)}`,
-    "",
-  ];
+    const lines: string[] = [
+      `[품질 게이트 검증 — ${law}${section ? ` § ${section}` : ""}]`,
+      `모드: ${strict ? "엄격(Strict)" : "표준(Standard)"} | 기준일: ${new Date().toISOString().slice(0, 10)}`,
+      "",
+    ];
 
-  let passCount = 0;
-  let warnCount = 0;
-  let failCount = 0;
+    let passCount = 0;
+    let warnCount = 0;
+    let failCount = 0;
 
-  const gateResults: Array<{ gate: Gate; result: GateResult }> = [];
+    const gateResults: Array<{ gate: Gate; result: GateResult }> = [];
 
-  for (const gate of GATES) {
-    const result = gate.check(ctx);
-    gateResults.push({ gate, result });
-    if (result.passed) passCount++;
-    else if (result.severity === "warning") warnCount++;
-    else failCount++;
-  }
-
-  // ── 요약 헤더 ─────────────────────────────────────────────────────────────
-  const total = GATES.length;
-  const score = Math.round((passCount / total) * 100);
-  const overallStatus =
-    failCount > 0 ? "❌ FAIL" : warnCount > 2 ? "⚠️ WARNING" : "✅ PASS";
-
-  lines.push(`종합 결과: ${overallStatus} (${score}점 / 100점)`);
-  lines.push(`통과: ${passCount}/${total} | 경고: ${warnCount} | 실패: ${failCount}`);
-  lines.push("");
-
-  // ── 카테고리별 결과 ───────────────────────────────────────────────────────
-  let currentCategory = "";
-  for (const { gate, result } of gateResults) {
-    if (gate.category !== currentCategory) {
-      currentCategory = gate.category;
-      lines.push(`━━ ${currentCategory} ${"━".repeat(Math.max(0, 40 - currentCategory.length))}`);
+    for (const gate of GATES) {
+      const result = gate.check(ctx);
+      gateResults.push({ gate, result });
+      if (result.passed) passCount++;
+      else if (result.severity === "warning") warnCount++;
+      else failCount++;
     }
 
-    const icon = result.passed
-      ? "✅"
-      : result.severity === "error"
-      ? "❌"
-      : "⚠️";
+    // ── 요약 헤더 ─────────────────────────────────────────────────────────────
+    const total = GATES.length;
+    const score = Math.round((passCount / total) * 100);
+    const overallStatus =
+      failCount > 0 ? "❌ FAIL" : warnCount > 2 ? "⚠️ WARNING" : "✅ PASS";
 
-    lines.push(`${icon} [${gate.id.toString().padStart(2, "0")}] ${gate.name}`);
-    lines.push(`   ${result.note}`);
-    if (result.recommendation) {
-      lines.push(`   💡 권장: ${result.recommendation}`);
-    }
+    lines.push(`종합 결과: ${overallStatus} (${score}점 / 100점)`);
+    lines.push(`통과: ${passCount}/${total} | 경고: ${warnCount} | 실패: ${failCount}`);
     lines.push("");
-  }
 
-  // ── 최종 권고 ─────────────────────────────────────────────────────────────
-  lines.push("─".repeat(50));
-  if (failCount > 0) {
-    lines.push("🚨 조치 필요 항목:");
+    // ── 카테고리별 결과 ───────────────────────────────────────────────────────
+    let currentCategory = "";
     for (const { gate, result } of gateResults) {
-      if (!result.passed && result.severity === "error") {
-        lines.push(`  • [${gate.id}] ${gate.name}: ${result.recommendation ?? result.note}`);
+      if (gate.category !== currentCategory) {
+        currentCategory = gate.category;
+        lines.push(`━━ ${currentCategory} ${"━".repeat(Math.max(0, 40 - currentCategory.length))}`);
       }
+
+      const icon = result.passed
+        ? "✅"
+        : result.severity === "error"
+        ? "❌"
+        : "⚠️";
+
+      lines.push(`${icon} [${gate.id.toString().padStart(2, "0")}] ${gate.name}`);
+      lines.push(`   ${result.note}`);
+      if (result.recommendation) {
+        lines.push(`   💡 권장: ${result.recommendation}`);
+      }
+      lines.push("");
     }
-    lines.push("");
+
+    // ── 최종 권고 ─────────────────────────────────────────────────────────────
+    lines.push("─".repeat(50));
+    if (failCount > 0) {
+      lines.push("🚨 조치 필요 항목:");
+      for (const { gate, result } of gateResults) {
+        if (!result.passed && result.severity === "error") {
+          lines.push(`  • [${gate.id}] ${gate.name}: ${result.recommendation ?? result.note}`);
+        }
+      }
+      lines.push("");
+    }
+
+    if (score >= 90) lines.push("✨ 우수한 분석 품질입니다.");
+    else if (score >= 70) lines.push("📋 일부 개선이 필요하나 실무 활용 가능한 수준입니다.");
+    else lines.push("⚠️ 중요 항목이 누락되어 있습니다. 위 권장사항을 검토하세요.");
+
+    return lines.join("\n");
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `[오류] Qualitäts-Gate 실행 중 오류: ${message}`;
   }
-
-  if (score >= 90) lines.push("✨ 우수한 분석 품질입니다.");
-  else if (score >= 70) lines.push("📋 일부 개선이 필요하나 실무 활용 가능한 수준입니다.");
-  else lines.push("⚠️ 중요 항목이 누락되어 있습니다. 위 권장사항을 검토하세요.");
-
-  return lines.join("\n");
 }

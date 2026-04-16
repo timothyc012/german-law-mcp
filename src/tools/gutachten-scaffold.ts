@@ -404,15 +404,21 @@ export type GutachtenScaffoldInput = z.infer<typeof gutachtenScaffoldSchema>;
 // ── Hauptfunktion ─────────────────────────────────────────────────────────
 
 export async function gutachtenScaffold(input: GutachtenScaffoldInput): Promise<string> {
-  const fragestellung = input.fragestellung
-    ?? "Welche Ansprüche bestehen aus dem geschilderten Sachverhalt?";
+  try {
+    const fragestellung = input.fragestellung
+      ?? "Welche Ansprüche bestehen aus dem geschilderten Sachverhalt?";
 
-  const relevanteNormen = erkennerelevantNormen(input.sachverhalt, input.rechtsgebiet);
+    const relevanteNormen = erkennerelevantNormen(input.sachverhalt, input.rechtsgebiet);
 
-  return erzeugeGutachten(
-    input.sachverhalt,
-    fragestellung,
-    relevanteNormen,
-    input.stil,
-  );
+    return erzeugeGutachten(
+      input.sachverhalt,
+      fragestellung,
+      relevanteNormen,
+      input.stil,
+    );
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `[오류] Gutachten-Generator 실행 중 오류: ${message}`;
+  }
 }

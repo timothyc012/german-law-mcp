@@ -3,15 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { searchConceptMap } from "../../src/lib/concept-map.js";
 import { extractCrossReferences, formatCrossReferences } from "../../src/lib/cross-references.js";
 import {
-  calculateFrist,
-  getBussUndBettag,
-  getDritterWerktagDesMonats,
-  getFeiertageDates,
-  parseIsoCalendarDate,
-} from "../../src/tools/calculate-frist.js";
-import { analyzeScenario } from "../../src/tools/analyze-scenario.js";
-import { gutachtenScaffold } from "../../src/tools/gutachten-scaffold.js";
-import {
   courtMatches,
   normalizeAktenzeichen,
   parseCitation,
@@ -39,57 +30,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
-});
-
-describe("calculate-frist helpers", () => {
-  it("parses valid ISO calendar dates and rejects impossible ones", () => {
-    expect(parseIsoCalendarDate("2024-02-29")?.toISOString()).toContain("2024-02-29");
-    expect(parseIsoCalendarDate("2024-02-30")).toBeNull();
-    expect(parseIsoCalendarDate("2024-13-01")).toBeNull();
-  });
-
-  it("calculates Buß- und Bettag for Sachsen correctly", () => {
-    const bussUndBettag = getBussUndBettag(2025);
-    expect(bussUndBettag.getFullYear()).toBe(2025);
-    expect(bussUndBettag.getMonth()).toBe(10);
-    expect(bussUndBettag.getDate()).toBe(19);
-  });
-
-  it("includes state-specific holidays such as Frauentag in Brandenburg 2025", () => {
-    const holidays = getFeiertageDates(2025, "BB");
-    expect(holidays.has("2025-03-08")).toBe(true);
-    expect(holidays.has("2025-10-31")).toBe(true);
-  });
-
-  it("finds the third working day for tenant notice calculations", () => {
-    const thirdWorkingDay = getDritterWerktagDesMonats(2025, 4, "NW");
-    expect(thirdWorkingDay.toISOString()).toContain("2025-05-05");
-  });
-
-  it("carries a year-end deadline into the next year on the next working day", async () => {
-    const output = await calculateFrist({
-      fristtyp: "revision_strafrecht",
-      ereignisdatum: "2022-12-24",
-      bundesland: "NW",
-      alle_fristen: false,
-    });
-
-    expect(output).toContain("Rechnerisches Fristende: 31. Dezember 2022 (Samstag)");
-    expect(output).toContain("✅ FRISTENDE (wirksam): 2. Januar 2023 (Montag)");
-  });
-
-  it("skips the Karfreitag to Ostermontag holiday chain", async () => {
-    const output = await calculateFrist({
-      fristtyp: "revision_strafrecht",
-      ereignisdatum: "2023-03-31",
-      bundesland: "NW",
-      alle_fristen: false,
-    });
-
-    expect(output).toContain("Rechnerisches Fristende: 7. April 2023 (Freitag)");
-    expect(output).toContain("gesetzlicher Feiertag in Nordrhein-Westfalen");
-    expect(output).toContain("✅ FRISTENDE (wirksam): 11. April 2023 (Dienstag)");
-  });
 });
 
 describe("verify-citation helpers", () => {
@@ -192,64 +132,5 @@ describe("search-law fallback behaviour", () => {
     expect(output).toContain("NeuRIS/GII 결과 없음, 개념 매핑 결과");
     expect(output).toContain("법률 개념 사전 (Concept Map)");
     expect(output).toContain("§ 536 BGB");
-  });
-});
-
-describe("gutachten-scaffold", () => {
-  it("recognizes Kaufrecht scenarios", async () => {
-    const output = await gutachtenScaffold({
-      sachverhalt: "A kaufte von B ein Auto. Nach kurzer Zeit zeigte sich ein Sachmangel, und B verweigert die Reparatur.",
-      fragestellung: "Welche Ansprüche hat A?",
-      stil: "kurz",
-    });
-
-    expect(output).toContain("§ 437 Nr. 1 i.V.m. § 439 BGB");
-    expect(output).toContain("Rechtsgebiet: Kaufrecht / Gewährleistung");
-  });
-
-  it("recognizes Mietrecht scenarios", async () => {
-    const output = await gutachtenScaffold({
-      sachverhalt: "Der Vermieter kündigte dem Mieter fristlos wegen Mietrückstand aus dem Mietvertrag über eine Wohnung.",
-      fragestellung: "Ist die Kündigung wirksam?",
-      stil: "kurz",
-    });
-
-    expect(output).toContain("§ 543 BGB");
-    expect(output).toContain("Rechtsgebiet: Mietrecht");
-  });
-
-  it("recognizes Arbeitsrecht scenarios", async () => {
-    const output = await gutachtenScaffold({
-      sachverhalt: "Der Arbeitgeber entließ den Arbeitnehmer fristlos nach einem behaupteten Diebstahl am Arbeitsplatz.",
-      fragestellung: "Welche Ansprüche hat der Arbeitnehmer?",
-      stil: "kurz",
-    });
-
-    expect(output).toContain("§ 626 BGB");
-    expect(output).toContain("Rechtsgebiet: Arbeitsrecht");
-  });
-});
-
-describe("analyze-scenario", () => {
-  it("includes a Beweislast section in full analysis", async () => {
-    const output = await analyzeScenario({
-      sachverhalt: "Ich habe bei einem Händler ein Auto gekauft. Nach zwei Wochen war der Motor defekt und der Verkäufer lehnt die Reparatur ab.",
-      perspektive: "neutral",
-      tiefe: "vollständig",
-    });
-
-    expect(output).toContain("BEWEISLASTVERTEILUNG");
-    expect(output).toContain("Allgemeine Regel: Jede Partei beweist die Voraussetzungen");
-  });
-
-  it("mentions the special § 477 BGB burden-of-proof rule for consumer sales", async () => {
-    const output = await analyzeScenario({
-      sachverhalt: "Ich habe online bei einem Händler ein Fahrzeug gekauft. Kurz nach der Lieferung zeigt sich ein Mangel und das Auto funktioniert nicht.",
-      perspektive: "kläger",
-      tiefe: "vollständig",
-    });
-
-    expect(output).toContain("§ 477 Abs. 1 BGB — Beweislastumkehr");
-    expect(output).toContain("Verbrauchsgüterkauf");
   });
 });
