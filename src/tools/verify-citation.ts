@@ -19,6 +19,64 @@ import { z } from "zod";
 import { searchCaseLaw, type CaseLawSearchResult } from "../lib/neuris-client.js";
 import { searchByAktenzeichen } from "../lib/old-client.js";
 
+function normalizeAktenzeichen(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[–—−]/g, "-")
+    .replace(/[^a-z0-9/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeCourtText(value: string): string {
+  return value
+    .toLowerCase()
+    // Expand German umlauts before NFD decomposition so München/Muenchen and Köln/Koeln match.
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function courtTypeAlias(token: string): string[] {
+  const map: Record<string, string[]> = {
+    olg: ["olg", "oberlandesgericht"],
+    lg: ["lg", "landgericht"],
+    ag: ["ag", "amtsgericht"],
+    vg: ["vg", "verwaltungsgericht"],
+    ovg: ["ovg", "oberverwaltungsgericht"],
+    arbg: ["arbg", "arbeitsgericht"],
+    lag: ["lag", "landesarbeitsgericht"],
+    fg: ["fg", "finanzgericht"],
+    kg: ["kg", "kammergericht"],
+  };
+  return map[token] ?? [token];
+}
+
+function courtMatches(requested: string, actual: string): boolean {
+  const requestedNorm = normalizeCourtText(requested);
+  const actualNorm = normalizeCourtText(actual);
+  if (!requestedNorm || !actualNorm) return false;
+  if (requestedNorm === actualNorm) return true;
+
+  const requestedTokens = requestedNorm.split(" ");
+  const actualTokens = new Set(actualNorm.split(" "));
+  const requestedType = requestedTokens[0];
+  const locationTokens = requestedTokens.slice(1).filter(Boolean);
+
+  const typeMatches = courtTypeAlias(requestedType).some((alias) => actualTokens.has(alias));
+  const locationMatches = locationTokens.every((token) => actualNorm.includes(token));
+
+  return typeMatches && locationMatches;
+}
+
 // ── Zitat-Parser ──────────────────────────────────────────────────────────
 
 interface ParsedCitation {
@@ -194,32 +252,42 @@ async function verifyCitationInternal(parsed: ParsedCitation): Promise<Verificat
   // Aktenzeichen-Suche
   if (parsed.typ === "aktenzeichen" && parsed.gericht && parsed.aktenzeichen) {
     const courtCode = GERICHTE_MAP[parsed.gericht];
+    const requestedAz = normalizeAktenzeichen(parsed.aktenzeichen);
     try {
       const results: CaseLawSearchResult = await searchCaseLaw(
         parsed.aktenzeichen,
         courtCode || undefined,
         5,
       );
-      const azNorm = parsed.aktenzeichen.replace(/\s+/g, " ").trim().toLowerCase();
-      const firstItem = results.items[0];
-      const allText = results.items
-        .map((it) => `${it.fileNumbers.join(" ")} ${it.documentNumber}`)
-        .join(" ")
-        .toLowerCase();
-      if (results.totalItems > 0 && allText.includes(azNorm.split("/")[0].trim().toLowerCase())) {
-        const preview = firstItem?.textMatches?.[0]?.text?.slice(0, 300) ?? "";
+      const exactItem = results.items.find((it) =>
+        it.fileNumbers.some((fileNumber) => normalizeAktenzeichen(fileNumber) === requestedAz),
+      );
+      const dateMatches = !parsed.datum || exactItem?.decisionDate === parsed.datum;
+      if (exactItem && dateMatches) {
+        const preview = exactItem.textMatches?.[0]?.text?.slice(0, 300) ?? "";
+        const matchedAz = exactItem.fileNumbers.find((fileNumber) => normalizeAktenzeichen(fileNumber) === requestedAz)
+          ?? parsed.aktenzeichen;
         return {
           ...base,
           gefunden: true,
           confidence: "high",
-          normalisiertesZitat: `${parsed.gericht}, ${parsed.datum ? `Urt. v. ${parsed.datum} – ` : ""}${parsed.aktenzeichen}`,
+          normalisiertesZitat: `${parsed.gericht}, ${parsed.datum ? `Urt. v. ${parsed.datum} – ` : ""}${matchedAz}`,
           entscheidung: {
             gericht: parsed.gericht,
-            aktenzeichen: parsed.aktenzeichen,
-            datum: parsed.datum ?? firstItem?.decisionDate ?? undefined,
-            dokumentnummer: firstItem?.documentNumber,
-            kurzinhalt: preview || firstItem?.headline?.slice(0, 300) || undefined,
+            aktenzeichen: matchedAz,
+            datum: exactItem.decisionDate ?? parsed.datum ?? undefined,
+            dokumentnummer: exactItem.documentNumber,
+            kurzinhalt: preview || exactItem.headline?.slice(0, 300) || undefined,
           },
+        };
+      }
+      if (exactItem && parsed.datum && exactItem.decisionDate && exactItem.decisionDate !== parsed.datum) {
+        return {
+          ...base,
+          gefunden: true,
+          confidence: "medium",
+          fehler: `Aktenzeichen ${parsed.aktenzeichen} wurde gefunden, aber mit abweichendem Entscheidungsdatum (${exactItem.decisionDate} statt ${parsed.datum}).`,
+          hinweis: "Bitte Datum im Originalzitat gegen NeuRIS prüfen.",
         };
       }
     } catch (_) {}
@@ -229,21 +297,45 @@ async function verifyCitationInternal(parsed: ParsedCitation): Promise<Verificat
     // Try Open Legal Data for non-federal courts
     if (isNonFederal) {
       try {
-        const oldResult = await searchByAktenzeichen(parsed.aktenzeichen!, 3);
-        if (oldResult.count > 0) {
-          const match = oldResult.results[0];
+        const oldResult = await searchByAktenzeichen(parsed.aktenzeichen!, 10);
+        const exactMatch = oldResult.results.find((match) => {
+          const azMatches = normalizeAktenzeichen(match.file_number) === requestedAz;
+          const courtOk = courtMatches(parsed.gericht!, match.court.name);
+          const dateOk = !parsed.datum || match.date === parsed.datum;
+          return azMatches && courtOk && dateOk;
+        });
+        if (exactMatch) {
           return {
             ...base,
             gefunden: true,
             confidence: "high",
-            normalisiertesZitat: `${match.court.name}, ${match.date} – ${match.file_number}`,
+            normalisiertesZitat: `${exactMatch.court.name}, ${exactMatch.date} – ${exactMatch.file_number}`,
             entscheidung: {
-              gericht: match.court.name,
-              datum: match.date,
-              aktenzeichen: match.file_number,
-              kurzinhalt: `Verified via Open Legal Data (${match.type}, ECLI: ${match.ecli || "n/a"})`,
+              gericht: exactMatch.court.name,
+              datum: exactMatch.date,
+              aktenzeichen: exactMatch.file_number,
+              kurzinhalt: `Verified via Open Legal Data (${exactMatch.type}, ECLI: ${exactMatch.ecli || "n/a"})`,
             },
-            hinweis: `Quelle: de.openlegaldata.io (352.000+ Entscheidungen). Volltext verfügbar.`,
+            hinweis: `Quelle: de.openlegaldata.io (352.000+ Entscheidungen). Gericht, Datum und Aktenzeichen stimmen überein.`,
+          };
+        }
+
+        const looseMatch = oldResult.results.find((match) =>
+          normalizeAktenzeichen(match.file_number) === requestedAz,
+        );
+        if (looseMatch) {
+          return {
+            ...base,
+            gefunden: true,
+            confidence: "medium",
+            normalisiertesZitat: `${looseMatch.court.name}, ${looseMatch.date} – ${looseMatch.file_number}`,
+            entscheidung: {
+              gericht: looseMatch.court.name,
+              datum: looseMatch.date,
+              aktenzeichen: looseMatch.file_number,
+              kurzinhalt: `Aktenzeichen via Open Legal Data gefunden (${looseMatch.type}, ECLI: ${looseMatch.ecli || "n/a"})`,
+            },
+            hinweis: `Aktenzeichen gefunden, aber Gericht und/oder Datum weichen vom Zitat ab. Bitte Originalfundstelle manuell prüfen.`,
           };
         }
       } catch (_) {

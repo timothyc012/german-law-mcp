@@ -324,10 +324,10 @@ server.registerTool(
       "Filterbar nach Gericht, Zeitraum und Instanz.",
     inputSchema: searchStateCourtsSchema.shape,
   },
-  async (params) => {
+  async (params: unknown) => {
     const input = searchStateCourtsSchema.parse(params);
     const result = await searchStateCourts(input);
-    return { content: [{ type: "text", text: result }] };
+    return { content: [{ type: "text" as const, text: result }] };
   },
 );
 

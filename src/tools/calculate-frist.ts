@@ -132,6 +132,33 @@ function toIsoDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+function parseIsoCalendarDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const jahr = Number(match[1]);
+  const monat = Number(match[2]);
+  const tag = Number(match[3]);
+  const date = new Date(jahr, monat - 1, tag, 12, 0, 0, 0);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== jahr ||
+    date.getMonth() !== monat - 1 ||
+    date.getDate() !== tag
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
+function isValidIsoCalendarDate(value: string): boolean {
+  return parseIsoCalendarDate(value) !== null;
+}
+
 function istWochenende(d: Date): boolean {
   const dow = d.getDay();
   return dow === 0 || dow === 6;
@@ -155,9 +182,70 @@ function verschiebeAufWerktag(d: Date, bundesland: string): Date {
 
 const WOCHENTAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+const BUNDESLAND_NAMEN: Record<string, string> = {
+  BW: "Baden-Württemberg", BY: "Bayern", BE: "Berlin", BB: "Brandenburg",
+  HB: "Bremen", HH: "Hamburg", HE: "Hessen", MV: "Mecklenburg-Vorpommern",
+  NI: "Niedersachsen", NW: "Nordrhein-Westfalen", RP: "Rheinland-Pfalz",
+  SL: "Saarland", SN: "Sachsen", ST: "Sachsen-Anhalt", SH: "Schleswig-Holstein",
+  TH: "Thüringen",
+};
 
 function formatDatum(d: Date): string {
   return `${d.getDate()}. ${MONATE[d.getMonth()]} ${d.getFullYear()} (${WOCHENTAGE[d.getDay()]})`;
+}
+
+function getMonatsende(jahr: number, monatIndex: number): Date {
+  return new Date(jahr, monatIndex + 1, 0, 12, 0, 0, 0);
+}
+
+function istMietrechtWerktag(d: Date, bundesland: string): boolean {
+  if (d.getDay() === 0) {
+    return false;
+  }
+
+  const feiertage = getFeiertageDates(d.getFullYear(), bundesland);
+  return !feiertage.has(toIsoDate(d));
+}
+
+function getDritterWerktagDesMonats(jahr: number, monatIndex: number, bundesland: string): Date {
+  let count = 0;
+
+  for (let tag = 1; tag <= 31; tag++) {
+    const current = new Date(jahr, monatIndex, tag, 12, 0, 0, 0);
+    if (current.getMonth() !== monatIndex) {
+      break;
+    }
+
+    if (istMietrechtWerktag(current, bundesland)) {
+      count += 1;
+      if (count === 3) {
+        return current;
+      }
+    }
+  }
+
+  throw new Error(`Dritter Werktag konnte nicht ermittelt werden: ${jahr}-${String(monatIndex + 1).padStart(2, "0")}`);
+}
+
+function berechneMietkuendigungMonatsende(
+  zugangsdatum: Date,
+  bundesland: string,
+  kuendigungsmonate: number,
+): { fristende: Date; dritterWerktag: Date; laufenderMonatZaehlt: boolean } {
+  const jahr = zugangsdatum.getFullYear();
+  const monatIndex = zugangsdatum.getMonth();
+  const dritterWerktag = getDritterWerktagDesMonats(jahr, monatIndex, bundesland);
+  const laufenderMonatZaehlt = zugangsdatum.getTime() <= dritterWerktag.getTime();
+  const monateBisMonatsende = laufenderMonatZaehlt ? kuendigungsmonate - 1 : kuendigungsmonate;
+  const zielmonatIndex = monatIndex + monateBisMonatsende;
+  const zieljahr = jahr + Math.floor(zielmonatIndex / 12);
+  const zielmonatImJahr = ((zielmonatIndex % 12) + 12) % 12;
+
+  return {
+    fristende: getMonatsende(zieljahr, zielmonatImJahr),
+    dritterWerktag,
+    laufenderMonatZaehlt,
+  };
 }
 
 // ── Fristtypen ────────────────────────────────────────────────────────────
@@ -357,6 +445,7 @@ export const calculateFristSchema = z.object({
   ereignisdatum: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD")
+    .refine(isValidIsoCalendarDate, "Ungültiges Kalenderdatum")
     .describe("Datum des fristauslösenden Ereignisses (Zustellung, Kündigung, Urteilsverkündung etc.) im Format YYYY-MM-DD"),
   bundesland: z
     .enum(["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"])
@@ -380,35 +469,71 @@ export async function calculateFrist(input: CalculateFristInput): Promise<string
     return `Unbekannter Fristtyp: ${fristtyp}`;
   }
 
-  const [jahr, monat, tag] = ereignisdatum.split("-").map(Number);
-  const startDatum = new Date(jahr, monat - 1, tag);
-
-  if (isNaN(startDatum.getTime())) {
+  const startDatum = parseIsoCalendarDate(ereignisdatum);
+  if (!startDatum) {
     return `Ungültiges Datum: ${ereignisdatum}`;
+  }
+
+  if (fristtyp === "kuendigung_mietvertrag_vermieter") {
+    const lines: string[] = [];
+    const dritteWerktag = getDritterWerktagDesMonats(startDatum.getFullYear(), startDatum.getMonth(), bundesland);
+
+    lines.push("═══════════════════════════════════════════════════════");
+    lines.push("  FRISTENBERECHNUNG");
+    lines.push("═══════════════════════════════════════════════════════");
+    lines.push(`  Fristtyp:       ${def.bezeichnung}`);
+    lines.push(`  Rechtsgrundlage: ${def.gesetz}`);
+    lines.push(`  Bundesland:     ${BUNDESLAND_NAMEN[bundesland] ?? bundesland}`);
+    lines.push("");
+    lines.push(`  Ereignisdatum:  ${formatDatum(startDatum)}`);
+    lines.push("  Fristlänge:     gesetzlich 3 / 6 / 9 Monate je nach Mietdauer");
+    lines.push("");
+    lines.push("───────────────────────────────────────────────────────");
+    lines.push("  ⚠  KEIN EXAKTES DATUM AUSGEGEBEN");
+    lines.push("  Die gesetzliche Kündigungsfrist des Vermieters hängt von der Mietdauer ab.");
+    lines.push("  Dieses Tool erhebt die Mietdauer nicht und gibt deshalb bewusst kein präzises Vertragsende aus.");
+    lines.push("");
+    lines.push(`  Maßgebliche Zugangsschwelle in diesem Monat: ${formatDatum(dritteWerktag)} (3. Werktag)`);
+    lines.push("  Für eine belastbare Berechnung müssen zusätzlich geprüft werden:");
+    lines.push("  • Mietdauer (3 / 6 / 9 Monate nach § 573c Abs. 1 S. 2 BGB)");
+    lines.push("  • Zugang bis zum 3. Werktag des Monats");
+    lines.push("  • Sonderregeln, Kündigungsausschlüsse und Vertragsgestaltung");
+    lines.push("");
+    lines.push("  Haftungshinweis: Diese Berechnung ersetzt keine anwaltliche");
+    lines.push("  Fristenkontrolle. Bitte stets in der Kanzleisoftware nachtragen.");
+
+    return lines.join("\n");
   }
 
   // Rohes Fristende berechnen
   // § 199 Abs. 1 BGB: Regelverjährung beginnt mit dem Ende des Jahres der Anspruchsentstehung
   let rohesFristende: Date;
+  let verschobenesFristende: Date;
+  let wurdeVerschoben = false;
+  let mietkuendigungHinweise: string[] = [];
+
   if (fristtyp === "verjährung_allgemein") {
     const jahrKenntnis = startDatum.getFullYear();
     const endYear = jahrKenntnis + Math.floor(def.laenge.wert / 12);
     rohesFristende = new Date(endYear, 11, 31);
+    verschobenesFristende = verschiebeAufWerktag(rohesFristende, bundesland);
+    wurdeVerschoben = toIsoDate(rohesFristende) !== toIsoDate(verschobenesFristende);
+  } else if (fristtyp === "kuendigung_mietvertrag_mieter") {
+    const mietende = berechneMietkuendigungMonatsende(startDatum, bundesland, def.laenge.wert);
+    rohesFristende = mietende.fristende;
+    verschobenesFristende = rohesFristende;
+    mietkuendigungHinweise = [
+      `Zugang bis zum 3. Werktag dieses Monats: ${formatDatum(mietende.dritterWerktag)}.`,
+      mietende.laufenderMonatZaehlt
+        ? "Der laufende Monat zählt noch mit; das Vertragsende wurde daher zum Ablauf des übernächsten Monats berechnet."
+        : "Der Zugang lag nach dem 3. Werktag; der laufende Monat zählt daher nicht mehr mit.",
+      "Für Mietkündigungen wird das Vertragsende als Monatsende berechnet; eine Verschiebung nach § 193 BGB findet hierfür nicht statt.",
+    ];
   } else {
     rohesFristende = berechneFristende(startDatum, def.laenge);
+    verschobenesFristende = verschiebeAufWerktag(rohesFristende, bundesland);
+    wurdeVerschoben = toIsoDate(rohesFristende) !== toIsoDate(verschobenesFristende);
   }
-
-  // § 193 BGB / § 222 Abs. 2 ZPO Verschiebung
-  const verschobenesFristende = verschiebeAufWerktag(rohesFristende, bundesland);
-  const wurdeVerschoben = toIsoDate(rohesFristende) !== toIsoDate(verschobenesFristende);
-
-  const bundeslandNamen: Record<string, string> = {
-    BW: "Baden-Württemberg", BY: "Bayern", BE: "Berlin", BB: "Brandenburg",
-    HB: "Bremen", HH: "Hamburg", HE: "Hessen", MV: "Mecklenburg-Vorpommern",
-    NI: "Niedersachsen", NW: "Nordrhein-Westfalen", RP: "Rheinland-Pfalz",
-    SL: "Saarland", SN: "Sachsen", ST: "Sachsen-Anhalt", SH: "Schleswig-Holstein",
-    TH: "Thüringen",
-  };
 
   const feiertage = getFeiertageDates(rohesFristende.getFullYear(), bundesland);
   const istFeiertag = feiertage.has(toIsoDate(rohesFristende));
@@ -419,7 +544,7 @@ export async function calculateFrist(input: CalculateFristInput): Promise<string
   lines.push("═══════════════════════════════════════════════════════");
   lines.push(`  Fristtyp:       ${def.bezeichnung}`);
   lines.push(`  Rechtsgrundlage: ${def.gesetz}`);
-  lines.push(`  Bundesland:     ${bundeslandNamen[bundesland] ?? bundesland}`);
+  lines.push(`  Bundesland:     ${BUNDESLAND_NAMEN[bundesland] ?? bundesland}`);
   lines.push("");
   lines.push(`  Ereignisdatum:  ${formatDatum(startDatum)}`);
   lines.push(`  Fristlänge:     ${def.laenge.wert} ${einheitLabel(def.laenge.einheit)}`);
@@ -431,13 +556,13 @@ export async function calculateFrist(input: CalculateFristInput): Promise<string
     const grund = istWochenende(rohesFristende)
       ? (rohesFristende.getDay() === 6 ? "Samstag" : "Sonntag")
       : istFeiertag
-        ? `gesetzlicher Feiertag in ${bundeslandNamen[bundesland]}`
+        ? `gesetzlicher Feiertag in ${BUNDESLAND_NAMEN[bundesland]}`
         : "Nicht-Werktag";
     lines.push(`  ⚠  ${grund} → Verschiebung gem. § 193 BGB / § 222 Abs. 2 ZPO`);
     lines.push("");
     lines.push(`  ✅ FRISTENDE (wirksam): ${formatDatum(verschobenesFristende)}`);
   } else {
-    lines.push(`  ✅ FRISTENDE: ${formatDatum(verschobenesFristende)}`);
+    lines.push(`  ✅ ${fristtyp === "kuendigung_mietvertrag_mieter" ? "VERTRAGSENDE" : "FRISTENDE"}: ${formatDatum(verschobenesFristende)}`);
   }
 
   lines.push("");
@@ -449,6 +574,14 @@ export async function calculateFrist(input: CalculateFristInput): Promise<string
     lines.push("");
     lines.push("  ⚠  HINWEIS:");
     lines.push(`  ${def.fristwahrung_hinweis}`);
+  }
+
+  if (mietkuendigungHinweise.length > 0) {
+    lines.push("");
+    lines.push("  ⚠  MIETRECHTLICHE EINORDNUNG:");
+    for (const hinweis of mietkuendigungHinweise) {
+      lines.push(`  ${hinweis}`);
+    }
   }
 
   // Folgefristen
