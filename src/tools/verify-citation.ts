@@ -19,6 +19,12 @@ import { z } from "zod";
 import { searchCaseLaw, type CaseLawSearchResult } from "../lib/neuris-client.js";
 import { searchByAktenzeichen } from "../lib/old-client.js";
 
+export {
+  courtMatches,
+  normalizeAktenzeichen,
+  parseCitation,
+};
+
 function normalizeAktenzeichen(value: string): string {
   return value
     .toLowerCase()
@@ -26,6 +32,7 @@ function normalizeAktenzeichen(value: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[–—−]/g, "-")
     .replace(/[^a-z0-9/]+/g, " ")
+    .replace(/\s*\/\s*/g, "/")
     .replace(/\s+/g, " ")
     .trim();
 }

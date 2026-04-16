@@ -14,6 +14,13 @@
 
 import { z } from "zod";
 
+export {
+  getBussUndBettag,
+  getDritterWerktagDesMonats,
+  getFeiertageDates,
+  parseIsoCalendarDate,
+};
+
 // ── Feiertage ─────────────────────────────────────────────────────────────
 // Berechnet Ostersonntag (Gaußsche Osterformel)
 function getOstersonntag(jahr: number): Date {
