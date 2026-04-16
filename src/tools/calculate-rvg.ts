@@ -114,16 +114,8 @@ const GEBUEHRENTATBESTAENDE: Record<string, GebuehrentatbestandDef[]> = {
   ],
 };
 
-// Instanz-Multiplikator (Berufung/Revision erhöhen Gebühr)
-const INSTANZ_FAKTOR: Record<string, number> = {
-  AG: 1.0,
-  LG: 1.0,
-  ArbG: 1.0,
-  OLG: 1.0,  // Berufung: gleiche Tabelle, aber Streitwert ggf. anders
-  BGH: 1.0,  // Revision: gleiches Tabellensystem
-  LAG: 1.0,
-  BAG: 1.0,
-};
+// Hinweis: Instanz-Multiplikator ist im aktuellen RVG nicht vorgesehen
+// (alle Instanzen verwenden die gleiche Tabelle nach § 13 RVG Anlage 2).
 
 // ── Auslagen (Pauschale nach VV 7002) ─────────────────────────────────────
 // Post- und Telekommunikationspauschale: 20% der Gebühren, max. 20 €
@@ -254,7 +246,7 @@ export async function calculateRvg(input: CalculateRvgInput): Promise<string> {
 }
 
 // ── Strafrecht (Rahmengebühren § 49 RVG) ─────────────────────────────────
-function calculateStrafrechtlich(streitwert: number, instanz: string, mwst: boolean): string {
+function calculateStrafrechtlich(_streitwert: number, instanz: string, mwst: boolean): string {
   // Strafrecht: Rahmengebühren aus VV 4100 ff. — keine Streitwert-Tabelle
   // Mittelgebühr (§ 14 RVG: Mittel aus Mindest und Höchst)
   const rahmenGebuehren: Record<string, { min: number; max: number; name: string; vv: string }[]> = {

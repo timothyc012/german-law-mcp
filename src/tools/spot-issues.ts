@@ -215,13 +215,15 @@ function erkenneIssues(sachverhalt: string, rechtsgebiet?: string): Issue[] {
   const sv = sachverhalt.toLowerCase();
 
   const treffer = ISSUE_DATABASE.filter((issue) => {
+    const keywordMatch = issue.trigger.some((kw) => sv.includes(kw.toLowerCase()));
+    if (!keywordMatch) return false;
     if (rechtsgebiet) {
       const rg = rechtsgebiet.toLowerCase();
       if (!issue.bereich.toLowerCase().includes(rg)) {
-        // Trotzdem bei Keyword-Treffer einschließen
+        return false;
       }
     }
-    return issue.trigger.some((kw) => sv.includes(kw.toLowerCase()));
+    return true;
   });
 
   // Nach Priorität sortieren

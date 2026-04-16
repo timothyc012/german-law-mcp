@@ -161,7 +161,7 @@ function parseCitation(zitat: string): ParsedCitation {
 
   // Vollständiges Aktenzeichen-Zitat: BGH, Urt. v. 12.03.2023 – IX ZR 123/22
   // Unterstützt auch OLG/LG/AG: OLG München, Urt. v. 12.03.2023 – 1 U 123/22
-  const COURT_RE = "BGH|BVerfG|BAG|BVerwG|BFH|BSG|BPatG|(?:OLG|LG|AG|VG|OVG|ArbG|LAG|FG)\\s+\\w+";
+  const COURT_RE = "BGH|BVerfG|BAG|BVerwG|BFH|BSG|BPatG|(?:OLG|LG|AG|VG|OVG|ArbG|LAG|FG)\\s+[\\w\\u00C0-\\u024F-]+";
   const vollAzMatch = raw.match(
     new RegExp(`^(${COURT_RE})[,\\s]+(?:Urt\\.|Beschl\\.|Bes\\.)?\\s*v\\.?\\s*(\\d{1,2}\\.\\d{1,2}\\.\\d{4})\\s*[–—-]\\s*([IVX\\d]+\\s+\\w+\\s+\\d+\\/\\d+[a-z]*)`, "i"),
   );
@@ -190,7 +190,7 @@ function parseCitation(zitat: string): ParsedCitation {
 
   // Zeitschriften-Zitat: BGH NJW 2023, 1234 oder BVerfG NJW 2021, 1234
   const zeitschriftMatch = raw.match(
-    /^(BGH|BVerfG|BAG|BVerwG|BFH|BSG|BPatG|OLG\s+\w+|AG\s+\w+|LG\s+\w+)[\s,]+(\w+(?:-\w+)?)\s+(\d{4}),?\s*(\d+)/i,
+    /^(BGH|BVerfG|BAG|BVerwG|BFH|BSG|BPatG|OLG\s+[\w\u00C0-\u024F-]+|AG\s+[\w\u00C0-\u024F-]+|LG\s+[\w\u00C0-\u024F-]+)[\s,]+(\w+(?:-\w+)?)\s+(\d{4}),?\s*(\d+)/i,
   );
   if (zeitschriftMatch) {
     return {

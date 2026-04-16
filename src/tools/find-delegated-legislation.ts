@@ -64,8 +64,7 @@ export async function findDelegatedLegislation(input: FindDelegatedLegislationIn
       ) {
         verordnungen.push(item);
       } else if (
-        name.includes("gesetz") ||
-        name.includes("ordnung") && !name.includes("verordnung")
+        (name.includes("gesetz") || name.includes("ordnung")) && !name.includes("verordnung")
       ) {
         gesetze.push(item);
       } else {

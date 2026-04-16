@@ -22,6 +22,7 @@ export const riskAlertSchema = z.object({
     ),
   ereignisdatum: z
     .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format muss YYYY-MM-DD sein")
     .optional()
     .describe(
       "Datum des schadensauslösenden Ereignisses (YYYY-MM-DD). " +
@@ -58,10 +59,15 @@ function extractDate(text: string): string | null {
       return `${m0[3]}-${month}-${day}`;
     }
   }
-  // DD.MM.YYYY format
-  const m1 = text.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  // DD.MM.YYYY format (supports single-digit day/month: 5.03.2024, 1.3.2024)
+  const m1 = text.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
   if (m1) {
-    return `${m1[3]}-${m1[2]}-${m1[1]}`;
+    const dateStr = `${m1[3]}-${m1[2].padStart(2, "0")}-${m1[1].padStart(2, "0")}`;
+    // Validate: reject impossible dates like 30.02.2024
+    const check = new Date(dateStr + "T00:00:00");
+    if (!isNaN(check.getTime()) && check.toISOString().slice(0, 10) === dateStr) {
+      return dateStr;
+    }
   }
   // YYYY-MM-DD format
   const m2 = text.match(/(\d{4})-(\d{2})-(\d{2})/);
@@ -72,38 +78,53 @@ function extractDate(text: string): string | null {
 }
 
 
+function isValidDate(dateStr: string): boolean {
+  const d = new Date(dateStr + "T00:00:00");
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === dateStr;
+}
+
 function addYears(dateStr: string, years: number): string {
-  const d = new Date(dateStr);
+  if (!isValidDate(dateStr)) return dateStr;
+  const d = new Date(dateStr + "T12:00:00"); // noon to avoid DST issues
+  const origMonth = d.getMonth();
   d.setFullYear(d.getFullYear() + years);
+  // Handle leap year: Feb 29 + 1 year → Feb 28, not Mar 1
+  if (d.getMonth() !== origMonth) {
+    d.setDate(0); // last day of previous month
+  }
   return d.toISOString().slice(0, 10);
 }
 
 // § 199 Abs. 4 BGB: Regelmäßige Verjährung endet am Jahresende
 // (31.12. des Jahres, in dem die Frist abläuft)
 function addYearsJahresende(dateStr: string, years: number): string {
-  const d = new Date(dateStr);
-  d.setFullYear(d.getFullYear() + years);
-  // Verjährung endet am letzten Tag des Jahres (§ 199 Abs. 4 BGB)
-  return `${d.getFullYear()}-12-31`;
+  if (!isValidDate(dateStr)) return dateStr;
+  const year = new Date(dateStr + "T12:00:00").getFullYear() + years;
+  return `${year}-12-31`;
 }
 
 // § 199 Abs. 3 Nr. 1 BGB: Absolute Höchstfrist = 10 Jahre ab Entstehung
 // Endet ebenfalls am Jahresende (§ 210 BGB analog)
 function addAbsoluteJahresende(dateStr: string, years: number): string {
-  const d = new Date(dateStr);
-  d.setFullYear(d.getFullYear() + years);
-  return `${d.getFullYear()}-12-31`;
+  if (!isValidDate(dateStr)) return dateStr;
+  const year = new Date(dateStr + "T12:00:00").getFullYear() + years;
+  return `${year}-12-31`;
 }
 
 export async function riskAlert(input: RiskAlertInput): Promise<string> {
   try {
     const { sachverhalt } = input;
     const lower = sachverhalt.toLowerCase();
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     const alerts: RiskAlert[] = [];
 
-    const baseDate = input.ereignisdatum ?? extractDate(sachverhalt);
+    let baseDate = input.ereignisdatum ?? extractDate(sachverhalt);
+    // Validate extracted/provided date
+    if (baseDate && !isValidDate(baseDate)) {
+      baseDate = null;
+    }
 
     // ── Verjährung ──────────────────────────────────────────────────────
     const verjaehrungKeywords = ["schaden", "anspruch", "kauf", "miete", "vertrag", "kündigung", "schadensersatz"];

@@ -24,10 +24,10 @@ export default [
       ...tsPlugin.configs.recommended.rules,
       "no-undef": "off",
       "no-console": "off",
-      "no-empty": "off",
+      "no-empty": ["error", { allowEmptyCatch: true }],
       "no-useless-escape": "off",
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
 ];

@@ -71,6 +71,10 @@ function celexToType(celex: string): string {
  * CELEX 번호로 EU 법령 메타데이터를 조회한다.
  */
 export async function fetchByCelex(celex: string): Promise<EurLexDocument | null> {
+  // Validate CELEX format to prevent SPARQL injection
+  if (!/^[0-9A-Za-z()]+$/.test(celex)) {
+    throw new Error(`Ungültiges CELEX-Format: ${celex}`);
+  }
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 SELECT DISTINCT ?title ?date WHERE {
@@ -103,7 +107,7 @@ export async function searchEurLex(
   keyword: string,
   limit = 5,
 ): Promise<EurLexDocument[]> {
-  const escaped = keyword.replace(/"/g, '\\"').toLowerCase();
+  const escaped = keyword.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ").replace(/\r/g, "").toLowerCase();
 
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
