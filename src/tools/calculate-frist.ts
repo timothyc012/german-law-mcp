@@ -388,7 +388,15 @@ export async function calculateFrist(input: CalculateFristInput): Promise<string
   }
 
   // Rohes Fristende berechnen
-  const rohesFristende = berechneFristende(startDatum, def.laenge);
+  // § 199 Abs. 1 BGB: Regelverjährung beginnt mit dem Ende des Jahres der Anspruchsentstehung
+  let rohesFristende: Date;
+  if (fristtyp === "verjährung_allgemein") {
+    const jahrKenntnis = startDatum.getFullYear();
+    const endYear = jahrKenntnis + Math.floor(def.laenge.wert / 12);
+    rohesFristende = new Date(endYear, 11, 31);
+  } else {
+    rohesFristende = berechneFristende(startDatum, def.laenge);
+  }
 
   // § 193 BGB / § 222 Abs. 2 ZPO Verschiebung
   const verschobenesFristende = verschiebeAufWerktag(rohesFristende, bundesland);

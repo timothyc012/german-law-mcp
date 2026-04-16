@@ -36,10 +36,10 @@ const CONCEPT_MAP: ConceptEntry[] = [
   { keywords: ["aliud", "falsche ware", "andere sache", "nicht bestellte ware"], norm: "§ 434 Abs. 3 BGB", description: "Aliud-Lieferung als Sachmangel", category: "Kaufrecht" },
   { keywords: ["garantie", "herstellergarantie", "haltbarkeitsgarantie"], norm: "§ 443 BGB", description: "Garantie", category: "Kaufrecht" },
   { keywords: ["gebrauchtwagen", "gebraucht kauf", "gebrauchtwaren"], norm: "§ 475 Abs. 2 BGB", description: "Gebrauchtwagenkauf — Gewährleistungsbeschränkung möglich", category: "Kaufrecht" },
-  { keywords: ["kaufvertrag", "kauf", "verkauf", "käufer", "verkäufer", "kaufen"], norm: "§ 433 BGB", description: "Kaufvertrag — Pflichten von Käufer und Verkäufer", category: "Kaufrecht" },
+  { keywords: ["kaufvertrag", "verkauf", "käufer", "verkäufer", "kaufen"], norm: "§ 433 BGB", description: "Kaufvertrag — Pflichten von Käufer und Verkäufer", category: "Kaufrecht" },
   { keywords: ["kaufpreis", "preis", "bezahlung", "zahlungspflicht"], norm: "§ 433 Abs. 2 BGB", description: "Kaufpreiszahlungspflicht", category: "Kaufrecht" },
   { keywords: ["gefahrübergang", "versand", "lieferung", "übergabe"], norm: "§ 446 BGB", description: "Gefahrübergang", category: "Kaufrecht" },
-  { keywords: ["fernabsatz", "online kauf", "internet kauf", "versandhandel", "e-commerce"], norm: "§ 312c BGB", description: "Fernabsatzvertrag", category: "Kaufrecht" },
+  { keywords: ["fernabsatz", "onlinekauf", "internetkauf", "versandhandel", "e-commerce", "onlinehandel"], norm: "§ 312c BGB", description: "Fernabsatzvertrag", category: "Kaufrecht" },
   { keywords: ["widerruf online", "14 tage widerruf", "widerrufsrecht online"], norm: "§ 355 BGB", description: "Widerrufsrecht bei Fernabsatz", category: "Kaufrecht" },
   { keywords: ["lieferverzug", "nicht geliefert", "spätlieferung", "lieferfrist"], norm: "§ 286 BGB", description: "Lieferverzug", category: "Kaufrecht" },
   { keywords: ["nachfrist", "fristsetzung nacherfüllung", "fristsetzung reparatur"], norm: "§ 323 Abs. 1 BGB", description: "Nachfristsetzung vor Rücktritt", category: "Kaufrecht" },
@@ -77,7 +77,7 @@ const CONCEPT_MAP: ConceptEntry[] = [
   { keywords: ["kuendigungsfrist arbeit", "frist kündigung arbeit", "ordentliche kündigung arbeit"], norm: "§ 622 BGB", description: "Kündigungsfristen im Arbeitsrecht", category: "Arbeitsrecht" },
   { keywords: ["mutterschutz", "schwangerschaft kündigung", "elternzeit"], norm: "§ 17 MuSchG", description: "Kündigungsverbot während Schwangerschaft", category: "Arbeitsrecht" },
   { keywords: ["zeitarbeit", "leiharbeit", "überlassung"], norm: "§ 1 AÜG", description: "Arbeitnehmerüberlassung", category: "Arbeitsrecht" },
-  { keywords: ["betrriebsrat", "mitbestimmung", "personalrat"], norm: "§ 1 BetrVG", description: "Betriebsverfassungsgesetz", category: "Arbeitsrecht" },
+  { keywords: ["betriebsrat", "mitbestimmung", "personalrat"], norm: "§ 1 BetrVG", description: "Betriebsverfassungsgesetz", category: "Arbeitsrecht" },
   { keywords: ["abfindung", "aufhebungsvertrag", "auflösungsvertrag"], norm: "§ 9 KSchG / § 1a KSchG", description: "Abfindung", category: "Arbeitsrecht" },
 
   // ═══ Schuldrecht AT ═══
