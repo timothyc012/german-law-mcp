@@ -26,7 +26,7 @@
 | `get_law_section` | 특정 조문 전문 조회 (`§ 437 BGB` 등) |
 | `get_law_toc` | 법률 목차·체계 조회 |
 | `search_case_law` | 연방법원 판례 검색 (법원별 필터 가능) |
-| `get_case_text` | 판례 전문 조회 (NeuRIS 문서번호로) |
+| `get_case_text` | 판례 전문/구간 조회 (NeuRIS 문서번호로, section/offset 지원) |
 | `search_all` | 법령 + 판례 통합 검색 |
 
 ### 실무 계산 (2개)

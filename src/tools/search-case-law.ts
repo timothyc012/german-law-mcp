@@ -72,7 +72,7 @@ export async function searchCaseLawTool(input: SearchCaseLawInput): Promise<stri
       lines.push("");
     }
 
-    lines.push(`get_case_text 도구에 문서번호를 전달하면 판결문 전문을 조회할 수 있습니다.`);
+    lines.push(`get_case_text 도구에 문서번호를 전달하면 판결문을 조회할 수 있습니다. 긴 판결문은 section/offset/maxChars로 나눠 읽으세요.`);
 
     return lines.join("\n");
   } catch (error) {

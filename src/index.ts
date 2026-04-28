@@ -186,7 +186,7 @@ server.registerTool(
   {
     description:
       "Retrieve the full text of a court decision by its document number (e.g., 'JURE120015069'). " +
-      "Use search_case_law first to find the document number.",
+      "Use search_case_law first to find the document number. Supports section and offset options for long decisions.",
     inputSchema: getCaseTextSchema.shape,
   },
   async (params) => {
