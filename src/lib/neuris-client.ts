@@ -8,6 +8,7 @@
 
 import { LRUCache } from "./cache.js";
 import { fetchWithRetry } from "./http-client.js";
+import { z } from "zod";
 
 const BASE_URL = "https://testphase.rechtsinformationen.bund.de";
 const DEFAULT_SIZE = 10;
@@ -74,6 +75,27 @@ export interface UnifiedSearchResult {
 }
 
 // ── 내부 유틸 ──
+
+const NeurisCollectionMemberSchema = z.object({}).passthrough();
+
+const NeurisCollectionSchema = z.object({
+  totalItems: z.number().nullable().optional(),
+  member: z.array(NeurisCollectionMemberSchema).nullable().optional(),
+}).passthrough();
+
+type NeurisCollectionPayload = z.infer<typeof NeurisCollectionSchema>;
+
+export function parseNeurisCollection(data: unknown, context: string): NeurisCollectionPayload {
+  const parsed = NeurisCollectionSchema.safeParse(data);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  const summary = parsed.error.issues
+    .map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`)
+    .join("; ");
+  throw new Error(`NeuRIS API shape changed (${context}): ${summary}`);
+}
 
 function clampSize(size: number | undefined): number {
   return Math.min(Math.max(size ?? DEFAULT_SIZE, 1), MAX_SIZE);
@@ -190,7 +212,7 @@ export async function searchLegislation(
 ): Promise<LegislationSearchResult> {
   const s = clampSize(size);
   const url = `${BASE_URL}/v1/legislation?searchTerm=${encodeURIComponent(query)}&size=${s}`;
-  const data = await fetchJson<any>(url);
+  const data = parseNeurisCollection(await fetchJson<unknown>(url), "legislation search");
 
   let result: LegislationSearchResult = {
     totalItems: data.totalItems ?? 0,
@@ -200,7 +222,10 @@ export async function searchLegislation(
   // 결과 없고 움라우트 포함 시 기본형으로 재시도
   if (result.totalItems === 0 && query !== deUmlaut(query)) {
     const fallbackUrl = `${BASE_URL}/v1/legislation?searchTerm=${encodeURIComponent(deUmlaut(query))}&size=${s}`;
-    const fallbackData = await fetchJson<any>(fallbackUrl);
+    const fallbackData = parseNeurisCollection(
+      await fetchJson<unknown>(fallbackUrl),
+      "legislation umlaut fallback",
+    );
     result = {
       totalItems: fallbackData.totalItems ?? 0,
       items: (fallbackData.member ?? []).map(parseLegislationItem),
@@ -224,7 +249,7 @@ export async function searchCaseLaw(
     url += `&court=${encodeURIComponent(court)}`;
   }
 
-  const data = await fetchJson<any>(url);
+  const data = parseNeurisCollection(await fetchJson<unknown>(url), "case-law search");
 
   let result: CaseLawSearchResult = {
     totalItems: data.totalItems ?? 0,
@@ -235,7 +260,10 @@ export async function searchCaseLaw(
   if (result.totalItems === 0 && query !== deUmlaut(query)) {
     let fallbackUrl = `${BASE_URL}/v1/case-law?searchTerm=${encodeURIComponent(deUmlaut(query))}&size=${s}`;
     if (court) fallbackUrl += `&court=${encodeURIComponent(court)}`;
-    const fallbackData = await fetchJson<any>(fallbackUrl);
+    const fallbackData = parseNeurisCollection(
+      await fetchJson<unknown>(fallbackUrl),
+      "case-law umlaut fallback",
+    );
     result = {
       totalItems: fallbackData.totalItems ?? 0,
       items: (fallbackData.member ?? []).map(parseCaseLawItem),
@@ -279,7 +307,7 @@ export async function searchAll(
 ): Promise<UnifiedSearchResult> {
   const s = clampSize(size);
   const url = `${BASE_URL}/v1/document?searchTerm=${encodeURIComponent(query)}&size=${s}`;
-  const data = await fetchJson<any>(url);
+  const data = parseNeurisCollection(await fetchJson<unknown>(url), "unified search");
 
   return {
     totalItems: data.totalItems ?? 0,
@@ -308,7 +336,7 @@ export async function luceneSearch(
 ): Promise<UnifiedSearchResult> {
   const s = clampSize(size);
   const url = `${BASE_URL}/v1/document/lucene-search?query=${encodeURIComponent(query)}&size=${s}`;
-  const data = await fetchJson<any>(url);
+  const data = parseNeurisCollection(await fetchJson<unknown>(url), "lucene search");
 
   return {
     totalItems: data.totalItems ?? 0,

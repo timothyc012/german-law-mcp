@@ -334,11 +334,81 @@ function buildUrl(slug, section, isArt) {
 
 // ── Utility: fetch GII HTML with ISO-8859-1 decoding ─────────────────────────
 
-async function fetchGii(url) {
-  const res = await fetch(url, {
-    signal: AbortSignal.timeout(15_000),
-    headers: { "User-Agent": "german-law-mcp/legal-verify (+legal-verify.mjs)" },
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const GII_USER_AGENT = "german-law-mcp/legal-verify (+legal-verify.mjs)";
+
+function abortError() {
+  return new DOMException("Request aborted", "AbortError");
+}
+
+function isAbortLikeError(error) {
+  return error instanceof DOMException && (error.name === "AbortError" || error.name === "TimeoutError");
+}
+
+function withTimeoutSignal(signal, timeoutMs) {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+}
+
+function sleep(ms, signal) {
+  if (signal?.aborted) {
+    return Promise.reject(abortError());
+  }
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+
+    function onAbort() {
+      clearTimeout(timeout);
+      reject(abortError());
+    }
+
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
+}
+
+async function fetchWithRetry(url, init = {}, options = {}) {
+  const retries = options.retries ?? 1;
+  const backoffMs = options.backoffMs ?? 300;
+  const timeoutMs = options.timeoutMs ?? 15_000;
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (init.signal?.aborted) {
+      throw abortError();
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: withTimeoutSignal(init.signal, timeoutMs),
+      });
+
+      if (!RETRYABLE_STATUS.has(response.status) || attempt === retries) {
+        return response;
+      }
+    } catch (error) {
+      lastError = error;
+      if (isAbortLikeError(error) || attempt === retries) {
+        throw error;
+      }
+    }
+
+    await sleep(backoffMs * 2 ** attempt, init.signal);
+  }
+
+  throw lastError ?? new Error(`Request failed: ${url}`);
+}
+
+async function fetchGii(url) {
+  const res = await fetchWithRetry(
+    url,
+    { headers: { "User-Agent": GII_USER_AGENT } },
+    { timeoutMs: 15_000, retries: 1, backoffMs: 500 },
+  );
   if (!res.ok) {
     return { ok: false, status: res.status, text: "" };
   }
