@@ -8,6 +8,7 @@
 import { z } from "zod";
 import { findLaw } from "../lib/law-abbreviations.js";
 import { LRUCache } from "../lib/cache.js";
+import { fetchWithRetry } from "../lib/http-client.js";
 
 const GII_BASE = "https://www.gesetze-im-internet.de";
 const cache = new LRUCache<string>(100, 3_600_000);
@@ -35,9 +36,7 @@ export async function getLawAmendments(input: GetLawAmendmentsInput): Promise<st
     if (cached) {
       html = cached;
     } else {
-      const res = await fetch(url, {
-        signal: AbortSignal.timeout(15_000),
-      });
+      const res = await fetchWithRetry(url, {}, { timeoutMs: 15_000, source: "GII amendment page" });
       if (!res.ok) {
         throw new Error(`GII error: ${res.status} — ${url}`);
       }

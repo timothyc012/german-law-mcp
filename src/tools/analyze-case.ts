@@ -141,7 +141,7 @@ export async function analyzeCase(input: AnalyzeCaseInput): Promise<string> {
   let meta;
   try {
     meta = await getCaseLawMeta(input.dokumentnummer);
-  } catch (_) {
+  } catch {
     return `Fehler: Urteil ${input.dokumentnummer} nicht in NeuRIS gefunden.\nBitte Dokumentnummer mit search_case_law verifizieren.`;
   }
 
@@ -159,7 +159,7 @@ export async function analyzeCase(input: AnalyzeCaseInput): Promise<string> {
   let html = "";
   try {
     html = await getCaseLawHtml(input.dokumentnummer);
-  } catch (_) {
+  } catch {
     lines.push("  ⚠  Volltext nicht verfügbar — nur Metadaten-Analyse");
   }
 
@@ -236,7 +236,7 @@ export async function analyzeCase(input: AnalyzeCaseInput): Promise<string> {
       } else {
         lines.push("  (Keine ähnlichen Urteile gefunden)");
       }
-    } catch (_) {
+    } catch {
       lines.push("  (Suche nach ähnlichen Urteilen fehlgeschlagen)");
     }
     lines.push("");

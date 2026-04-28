@@ -7,7 +7,8 @@
  */
 
 import { LRUCache } from "./cache.js";
-import { findLaw, buildGiiSectionUrl, type LawInfo } from "./law-abbreviations.js";
+import { fetchWithRetry } from "./http-client.js";
+import { findLaw, buildGiiSectionUrl } from "./law-abbreviations.js";
 
 const GII_BASE = "https://www.gesetze-im-internet.de";
 
@@ -48,9 +49,7 @@ async function fetchGiiHtml(url: string): Promise<string> {
   const cached = cache.get(url);
   if (cached) return cached;
 
-  const res = await fetch(url, {
-    signal: AbortSignal.timeout(15_000),
-  });
+  const res = await fetchWithRetry(url, {}, { timeoutMs: 15_000, source: "GII" });
 
   if (!res.ok) {
     throw new Error(`GII error: ${res.status} — ${url}`);
@@ -235,9 +234,7 @@ export async function getToc(): Promise<TocEntry[]> {
   if (cached) return JSON.parse(cached);
 
   const url = `${GII_BASE}/gii-toc.xml`;
-  const res = await fetch(url, {
-    signal: AbortSignal.timeout(30_000),
-  });
+  const res = await fetchWithRetry(url, {}, { timeoutMs: 30_000, source: "GII TOC" });
 
   if (!res.ok) {
     throw new Error(`GII TOC error: ${res.status}`);

@@ -165,7 +165,7 @@ export async function getNormContext(input: GetNormContextInput): Promise<string
     const section = await getLawSection(input.gesetz.toUpperCase(), input.paragraph);
     lines.push(`\n  ${section.content.slice(0, 1500)}`);
     if (section.content.length > 1500) lines.push("  [... Volltext via get_law_section abrufbar]");
-  } catch (_) {
+  } catch {
     lines.push(`  ⚠  Normtext nicht abrufbar (${input.gesetz.toUpperCase()} § ${input.paragraph})`);
     lines.push("     Bitte Abkürzung prüfen oder get_law_section verwenden.");
   }
@@ -236,7 +236,7 @@ export async function getNormContext(input: GetNormContextInput): Promise<string
       } else {
         lines.push(`  (Keine Treffer für '${suchbegriff}' — breiteren Suchbegriff versuchen)`);
       }
-    } catch (_) {
+    } catch {
       lines.push("  (BGH-Suche fehlgeschlagen — NeuRIS möglicherweise nicht erreichbar)");
     }
   }

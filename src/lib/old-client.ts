@@ -6,6 +6,8 @@
  * Complements NeuRIS (federal courts only) with state court coverage.
  */
 
+import { fetchWithRetry } from "./http-client.js";
+
 const OLD_BASE = "https://de.openlegaldata.io/api";
 
 export interface OLDCase {
@@ -39,7 +41,7 @@ export async function searchByAktenzeichen(
   pageSize: number = 5,
 ): Promise<OLDSearchResult> {
   const url = `${OLD_BASE}/cases/?format=json&file_number=${encodeURIComponent(fileNumber)}&page_size=${pageSize}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  const res = await fetchWithRetry(url, {}, { timeoutMs: 15_000, source: "Open Legal Data" });
   if (!res.ok) throw new Error(`OLD API error: ${res.status}`);
   return res.json() as Promise<OLDSearchResult>;
 }
@@ -62,7 +64,7 @@ export async function searchByCourt(
   params.set("ordering", "-date");
 
   const url = `${OLD_BASE}/cases/?${params}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  const res = await fetchWithRetry(url, {}, { timeoutMs: 15_000, source: "Open Legal Data" });
   if (!res.ok) throw new Error(`OLD API error: ${res.status}`);
   return res.json() as Promise<OLDSearchResult>;
 }
@@ -72,7 +74,7 @@ export async function searchByCourt(
  */
 export async function getCaseById(id: number): Promise<OLDCase> {
   const url = `${OLD_BASE}/cases/${id}/?format=json`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  const res = await fetchWithRetry(url, {}, { timeoutMs: 15_000, source: "Open Legal Data" });
   if (!res.ok) throw new Error(`OLD API error: ${res.status} for case ${id}`);
   return res.json() as Promise<OLDCase>;
 }

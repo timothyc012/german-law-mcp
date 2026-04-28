@@ -6,7 +6,7 @@
  * 독일 연방법률 검색 및 조회를 위한 MCP 서버.
  * NeuRIS API + Gesetze im Internet을 데이터 소스로 사용한다.
  *
- * 도구 목록 (25개):
+ * 도구 목록 (33개):
  * ── 기본 검색 ──────────────────────────────────────────
  *  1. search_law          — 법률 키워드 검색 (GII + Concept Map)
  *  2. get_law_section     — 특정 조문 전문 조회
@@ -40,6 +40,14 @@
  * 24. lookup_legal_term    — 독일 법률 용어 사전 (40+ 용어, 한국어/영어)
  * ── 리스크 알림 (Phase 7) ──────────────────────────────
  * 25. risk_alert           — 사실관계 기반 리스크 조기 경고 (Verjährung/Frist/Kosten)
+ * 26. get_law_toc          — 법률 목차 조회
+ * 27. compare_sections     — 조문 비교 / diff
+ * 28. find_delegated_legislation — 관련 위임법령 검색
+ * 29. search_eurlex        — EUR-Lex EU법 검색
+ * 30. get_eurlex_document  — CELEX 문서 본문 조회
+ * 31. get_law_amendments   — GII 현행 개정 상태/주석 조회
+ * 32. review_contract_clauses — AGB-Kontrolle nach BGB §§ 307-309
+ * 33. chain_full_research   — 종합 법률 리서치 보고서 워크플로우
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -48,6 +56,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 // 기본 검색 도구
 import { searchLawSchema, searchLaw } from "./tools/search-law.js";
 import { getLawSectionSchema, getLawSection } from "./tools/get-law-section.js";
+import { getLawTocSchema, getLawToc } from "./tools/get-law-toc.js";
 import { searchCaseLawSchema, searchCaseLawTool } from "./tools/search-case-law.js";
 import { getCaseTextSchema, getCaseText } from "./tools/get-case-text.js";
 import { searchAllSchema, searchAllTool } from "./tools/search-all.js";
@@ -70,12 +79,16 @@ import { getNormContextSchema, getNormContext } from "./tools/get-norm-context.j
 import { searchStateCourtsSchema, searchStateCourts } from "./tools/search-state-courts.js";
 import { analyzeScenarioSchema, analyzeScenario } from "./tools/analyze-scenario.js";
 import { compareDeEuSchema, compareDeEu } from "./tools/compare-de-eu.js";
+import { searchEurLexSchema, searchEurLexTool } from "./tools/search-eurlex.js";
+import { getEurLexDocumentSchema, getEurLexDocumentTool } from "./tools/get-eurlex-document.js";
 
 // 품질 / 고급 분석 도구 (Phase 4)
 import { getDelegationChainSchema, getDelegationChain } from "./tools/get-delegation-chain.js";
+import { findDelegatedLegislationSchema, findDelegatedLegislation } from "./tools/find-delegated-legislation.js";
 import { searchWithGradeSchema, searchWithGrade } from "./tools/search-with-grade.js";
 import { extractCrossRefsSchema, extractCrossRefs } from "./tools/extract-cross-refs.js";
 import { qualityGateSchema, qualityGate } from "./tools/quality-gate.js";
+import { compareSectionsSchema, compareSections } from "./tools/compare-sections.js";
 
 // 주법 도구 (Phase 5)
 import { searchStateLawSchema, searchStateLaw } from "./tools/search-state-law.js";
@@ -83,16 +96,19 @@ import { getStateLawSectionSchema, getStateLawSectionTool } from "./tools/get-st
 
 // 개정 이력 / 사전 도구 (Phase 6)
 import { getAmendmentHistorySchema, getAmendmentHistory } from "./tools/get-amendment-history.js";
+import { getLawAmendmentsSchema, getLawAmendments } from "./tools/get-law-amendments.js";
 import { lookupLegalTermSchema, lookupLegalTerm } from "./tools/lookup-legal-term.js";
 
 // 리스크 알림 도구 (Phase 7)
 import { riskAlertSchema, riskAlert } from "./tools/risk-alert.js";
+import { reviewContractClausesSchema, reviewContractClauses } from "./tools/review-contract-clauses.js";
+import { chainFullResearchSchema, chainFullResearch } from "./tools/chain-full-research.js";
 
 const server = new McpServer({
   name: "german-law-mcp",
   version: "0.7.0",
   description:
-    "German law MCP server — 25 tools covering federal legislation, court decisions, " +
+    "German law MCP server — 33 tools covering federal legislation, court decisions, " +
     "fee calculation, deadline computation, citation verification, amendment history, " +
     "legal analysis, German-EU law comparison (EUR-Lex live), delegation chain tracing, " +
     "source grading, cross-reference extraction, 14-gate quality validation, " +
@@ -131,6 +147,21 @@ server.registerTool(
   async (params) => {
     const input = getLawSectionSchema.parse(params);
     const result = await getLawSection(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "get_law_toc",
+  {
+    description:
+      "Retrieve the table of contents / structure of a German federal law from Gesetze im Internet. " +
+      "Use before get_law_section when you need to discover available sections in a law.",
+    inputSchema: getLawTocSchema.shape,
+  },
+  async (params) => {
+    const input = getLawTocSchema.parse(params);
+    const result = await getLawToc(input);
     return { content: [{ type: "text", text: result }] };
   },
 );
@@ -365,6 +396,36 @@ server.registerTool(
   },
 );
 
+server.registerTool(
+  "search_eurlex",
+  {
+    description:
+      "Search EUR-Lex CELLAR for EU regulations, directives, and decisions. " +
+      "Returns CELEX identifiers that can be passed to get_eurlex_document.",
+    inputSchema: searchEurLexSchema.shape,
+  },
+  async (params) => {
+    const input = searchEurLexSchema.parse(params);
+    const result = await searchEurLexTool(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "get_eurlex_document",
+  {
+    description:
+      "Retrieve a German-language EUR-Lex document body by CELEX identifier. " +
+      "Use search_eurlex first when you do not know the CELEX number.",
+    inputSchema: getEurLexDocumentSchema.shape,
+  },
+  async (params) => {
+    const input = getEurLexDocumentSchema.parse(params);
+    const result = await getEurLexDocumentTool(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
 // ── [6] 품질 / 고급 분석 도구 (Phase 4) ──────────────────────────────────
 
 server.registerTool(
@@ -378,6 +439,21 @@ server.registerTool(
   async (params) => {
     const input = getDelegationChainSchema.parse(params);
     const result = await getDelegationChain(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "find_delegated_legislation",
+  {
+    description:
+      "Search NeuRIS for delegated legislation such as Rechtsverordnungen and Durchführungsverordnungen related to a law. " +
+      "Use alongside get_delegation_chain when the static delegation map does not cover the topic.",
+    inputSchema: findDelegatedLegislationSchema.shape,
+  },
+  async (params) => {
+    const input = findDelegatedLegislationSchema.parse(params);
+    const result = await findDelegatedLegislation(input);
     return { content: [{ type: "text", text: result }] };
   },
 );
@@ -429,6 +505,21 @@ server.registerTool(
   async (params) => {
     const input = qualityGateSchema.parse(params);
     const result = await qualityGate(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "compare_sections",
+  {
+    description:
+      "Compare two German law sections or compare user-provided old text against the current GII section text. " +
+      "Returns a line-based diff for amendment review and statutory comparison.",
+    inputSchema: compareSectionsSchema.shape,
+  },
+  async (params) => {
+    const input = compareSectionsSchema.parse(params);
+    const result = await compareSections(input);
     return { content: [{ type: "text", text: result }] };
   },
 );
@@ -489,6 +580,21 @@ server.registerTool(
 );
 
 server.registerTool(
+  "get_law_amendments",
+  {
+    description:
+      "Retrieve the current GII amendment status, notes, and visible amendment references for a German federal law. " +
+      "For curated BGBl timelines, use get_amendment_history.",
+    inputSchema: getLawAmendmentsSchema.shape,
+  },
+  async (params) => {
+    const input = getLawAmendmentsSchema.parse(params);
+    const result = await getLawAmendments(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
   "lookup_legal_term",
   {
     description:
@@ -521,6 +627,36 @@ server.registerTool(
   async (params) => {
     const input = riskAlertSchema.parse(params);
     const result = await riskAlert(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_contract_clauses",
+  {
+    description:
+      "Screen German contract or AGB clauses for common unfair-term risks under BGB §§ 307-309. " +
+      "Returns risk flags, legal basis, and review notes; it is a triage tool, not final legal advice.",
+    inputSchema: reviewContractClausesSchema.shape,
+  },
+  async (params) => {
+    const input = reviewContractClausesSchema.parse(params);
+    const result = await reviewContractClauses(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "chain_full_research",
+  {
+    description:
+      "Run an opinionated full legal research workflow and return a structured report. " +
+      "Combines issue spotting, optional live law/case search, and optional quality_gate validation.",
+    inputSchema: chainFullResearchSchema.shape,
+  },
+  async (params) => {
+    const input = chainFullResearchSchema.parse(params);
+    const result = await chainFullResearch(input);
     return { content: [{ type: "text", text: result }] };
   },
 );

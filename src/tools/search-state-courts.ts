@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { fetchWithRetry } from "../lib/http-client.js";
 
 const OPENJUR_BASE = "https://openjur.de";
 const OPENJUR_SEARCH = `${OPENJUR_BASE}/suche/`;
@@ -105,15 +106,13 @@ async function fetchOpenjurPage(url: string, init: RequestInit): Promise<string>
   let response: Response;
 
   try {
-    response = await fetch(url, {
+    response = await fetchWithRetry(url, {
       ...init,
       headers: {
-        "User-Agent": "german-law-mcp/1.0 (legal research tool)",
         Accept: "text/html,application/xhtml+xml",
         ...(init.headers ?? {}),
       },
-      signal: AbortSignal.timeout(15000),
-    });
+    }, { timeoutMs: 15_000, source: "openjur.de" });
   } catch (err) {
     throw new Error(`openjur.de nicht erreichbar: ${(err as Error).message}`);
   }

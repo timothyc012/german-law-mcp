@@ -22,10 +22,6 @@ export function diffLines(oldText: string, newText: string): DiffLine[] {
   const m = oldLines.length;
   const n = newLines.length;
 
-  // Optimize: use 1D rolling array for LCS
-  const prev = new Array(n + 1).fill(0);
-  const curr = new Array(n + 1).fill(0);
-
   // Build LCS length table (we need full table for backtrack)
   const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
 

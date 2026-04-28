@@ -9,6 +9,7 @@
  */
 
 import { LAW_MAP } from "./law-abbreviations.js";
+import { fetchWithRetry } from "./http-client.js";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────
 
@@ -139,10 +140,9 @@ function parseDMYDate(dmy: string): string {
 
 async function fetchGiiLandingPage(slug: string): Promise<string> {
   const url = `https://www.gesetze-im-internet.de/${slug}/`;
-  const res = await fetch(url, {
-    signal: AbortSignal.timeout(12_000),
+  const res = await fetchWithRetry(url, {
     headers: { "Accept-Charset": "iso-8859-1" },
-  });
+  }, { timeoutMs: 12_000, source: "GII landing page" });
 
   if (!res.ok) {
     throw new Error(`GII landing page error: ${res.status} — ${url}`);

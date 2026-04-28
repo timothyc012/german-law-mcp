@@ -7,6 +7,8 @@
  * 타임아웃: 10초. 실패 시 호출자가 정적 데이터로 fallback한다.
  */
 
+import { fetchWithRetry } from "./http-client.js";
+
 const CELLAR_SPARQL = "https://publications.europa.eu/webapi/rdf/sparql";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────
@@ -34,12 +36,11 @@ async function runSparql(query: string): Promise<SparqlBinding[]> {
   url.searchParams.set("query", query);
   url.searchParams.set("format", "application/sparql-results+json");
 
-  const res = await fetch(url.toString(), {
-    signal: AbortSignal.timeout(10_000),
+  const res = await fetchWithRetry(url.toString(), {
     headers: {
       Accept: "application/sparql-results+json",
     },
-  });
+  }, { timeoutMs: 10_000, source: "EUR-Lex CELLAR" });
 
   if (!res.ok) {
     throw new Error(`CELLAR SPARQL error: ${res.status}`);
@@ -181,7 +182,7 @@ export interface EurLexFullDocument {
 export async function getEurLexDocument(celex: string): Promise<EurLexFullDocument> {
   const url = buildEurLexUrl(celex, "DE").replace("/TXT/", "/TXT/HTML/");
 
-  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+  const res = await fetchWithRetry(url, {}, { timeoutMs: 30_000, source: "EUR-Lex document" });
   if (!res.ok) {
     throw new Error(`EUR-Lex document error: ${res.status} — CELEX: ${celex}`);
   }

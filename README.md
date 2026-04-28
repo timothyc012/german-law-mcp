@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 독일 연방법률 검색·분석을 위한 **Model Context Protocol (MCP) 서버**.  
-25개 도구로 법령 조문, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교(EUR-Lex 실시간), 위임체계 추적, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전, 리스크 조기 경고까지 커버합니다.
+33개 도구로 법령 조문, 법률 목차, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교·EUR-Lex 직접 조회, 위임체계 추적, 조문 비교, 계약/AGB 리스크 스크리닝, 종합 리서치 체인, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전, 리스크 조기 경고까지 커버합니다.
 
 ## 데이터 소스
 
@@ -16,14 +16,15 @@
 | [EUR-Lex CELLAR](https://publications.europa.eu/webapi/rdf/sparql) | EU 법령 실시간 메타데이터 (SPARQL API) | ✅ |
 | Wayback Machine | 법령 역사적 버전 조회 | ✅ |
 
-## 도구 목록 (25개)
+## 도구 목록 (33개)
 
-### 기본 검색 (5개)
+### 기본 검색 (6개)
 
 | 도구 | 설명 |
 |------|------|
 | `search_law` | 키워드로 연방법령 검색 |
 | `get_law_section` | 특정 조문 전문 조회 (`§ 437 BGB` 등) |
+| `get_law_toc` | 법률 목차·체계 조회 |
 | `search_case_law` | 연방법원 판례 검색 (법원별 필터 가능) |
 | `get_case_text` | 판례 전문 조회 (NeuRIS 문서번호로) |
 | `search_all` | 법령 + 판례 통합 검색 |
@@ -35,13 +36,14 @@
 | `calculate_rvg` | 변호사 수임료 계산 (RVG 기준, 소가별 요율표) |
 | `calculate_frist` | 소송 기한 계산 (ZPO § 222, 공휴일·일요일 자동 처리) |
 
-### 검증 / 이력 (3개)
+### 검증 / 이력 (4개)
 
 | 도구 | 설명 |
 |------|------|
 | `verify_citation` | 판례 인용 검증 — AI 환각 방지 (Aktenzeichen, NJW, BGHZ, BeckRS) |
 | `get_norm_version` | 법령 역사적 버전 조회 (Wayback Machine 연동) |
 | `get_amendment_history` | BGBl 개정 이력 타임라인 — GII 실시간 파싱 + 하드코딩 병합 |
+| `get_law_amendments` | GII 기준 현행 개정 상태·주석 조회 |
 
 ### 심층 분석 (4개) — Phase 2
 
@@ -52,21 +54,25 @@
 | `analyze_case` | 판례 심층 분석 — 리드자츠, 주문, 규범망, 유사 판례 |
 | `get_norm_context` | 법령 맥락 조회 — 인접 조문, 관련 규범, 주석서 포인터, BGH 판례 |
 
-### 확장 도구 (3개) — Phase 3
+### 확장 도구 (5개) — Phase 3
 
 | 도구 | 설명 |
 |------|------|
 | `search_state_courts` | OLG·LG 판례 검색 (openjur.de, 주 법원) |
 | `analyze_scenario` | 시나리오 기반 청구원인 분석 — 성공가능성 신호등, 증거·절차 가이드 |
 | `compare_de_eu` | 독일-EU법 교차비교 — EU규정, 독일 이행법, 위반 시 효과, EuGH 판례 |
+| `search_eurlex` | EUR-Lex CELLAR에서 EU 규정·지침·결정 검색 |
+| `get_eurlex_document` | CELEX 번호로 EUR-Lex 문서 본문 조회 |
 
-### 품질 / 고급 분석 (4개) — Phase 4
+### 품질 / 고급 분석 (6개) — Phase 4
 
 | 도구 | 설명 |
 |------|------|
 | `get_delegation_chain` | 3단계 위임체계 추적 — 법률 → Rechtsverordnung → Verwaltungsvorschrift |
+| `find_delegated_legislation` | NeuRIS에서 관련 시행령·위임법령 검색 |
 | `search_with_grade` | 소스 신뢰도 등급(A–D) 포함 통합 검색 |
 | `extract_cross_refs` | 조문 교차참조 자동 추출 — 타 법률·EU법령 링크 분류 |
+| `compare_sections` | 두 조문 또는 구/현행 조문 텍스트 diff 비교 |
 | `quality_gate` | 14단계 법률 분석 품질 자동 검증 |
 
 ### 주법 Landesrecht (2개) — Phase 5
@@ -82,11 +88,18 @@
 |------|------|
 | `lookup_legal_term` | 독일 법률 용어 사전 — 40개 이상 용어, 한국어·영어 설명, 관련 조문, 퍼지 검색 |
 
-### 리스크 알림 (1개) — Phase 7
+### 리스크 / 계약 검토 (2개) — Phase 7
 
 | 도구 | 설명 |
 |------|------|
 | `risk_alert` | 사실관계 기반 리스크 조기 경고 — Verjährung 카운트다운, Frist 경고, 비용·관할 리스크 점검 |
+| `review_contract_clauses` | BGB §§ 307-309 기준 계약·AGB 불공정 조항 리스크 스크리닝 |
+
+### 체인 워크플로우 (1개)
+
+| 도구 | 설명 |
+|------|------|
+| `chain_full_research` | 이슈 스포팅, 법령·판례 검색, 품질 게이트를 묶은 종합 리서치 보고서 |
 
 ## 설치
 
@@ -207,7 +220,7 @@ risk_alert({
 
 ```
 src/
-├── index.ts              # MCP 서버 진입점 (도구 25개 등록)
+├── index.ts              # MCP 서버 진입점 (도구 33개 등록)
 ├── lib/
 │   ├── neuris-client.ts      # NeuRIS API 클라이언트
 │   ├── gii-client.ts         # gesetze-im-internet.de 클라이언트
@@ -219,7 +232,7 @@ src/
 │   ├── cache.ts              # 응답 캐싱 (TTL 기반)
 │   ├── court-map.ts          # 법원 코드 매핑
 │   └── law-abbreviations.ts  # 법령 약어 데이터베이스 (50+)
-└── tools/                # 도구별 구현 (25개)
+└── tools/                # 도구별 구현 (33개)
     ├── search-law.ts
     ├── get-law-section.ts
     ├── search-case-law.ts

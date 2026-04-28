@@ -252,7 +252,7 @@ async function verifyCitationInternal(parsed: ParsedCitation): Promise<Verificat
           entscheidung: { gericht: "unbekannt", dokumentnummer: parsed.neurisNr, kurzinhalt: text.slice(0, 200) },
         };
       }
-    } catch (_) {}
+    } catch {}
     return { ...base, gefunden: false, confidence: "hallucination_risk", fehler: `Dokumentnummer ${parsed.neurisNr} nicht in NeuRIS gefunden.` };
   }
 
@@ -297,7 +297,7 @@ async function verifyCitationInternal(parsed: ParsedCitation): Promise<Verificat
           hinweis: "Bitte Datum im Originalzitat gegen NeuRIS prüfen.",
         };
       }
-    } catch (_) {}
+    } catch {}
     // OLG/LG/AG: NeuRIS covers federal courts only — not hallucination, just outside DB scope
     const isNonFederal = /^(OLG|LG|AG|VG|OVG|ArbG|LAG|FG)\s/i.test(parsed.gericht);
 
@@ -345,7 +345,7 @@ async function verifyCitationInternal(parsed: ParsedCitation): Promise<Verificat
             hinweis: `Aktenzeichen gefunden, aber Gericht und/oder Datum weichen vom Zitat ab. Bitte Originalfundstelle manuell prüfen.`,
           };
         }
-      } catch (_) {
+      } catch {
         // OLD API failed — fall through to medium confidence
       }
     }
@@ -394,7 +394,7 @@ async function verifyCitationInternal(parsed: ParsedCitation): Promise<Verificat
           hinweis: `⚠️ SEITENZAHL NICHT VERIFIZIERT: NeuRIS enthält keine ${parsed.zeitschrift}-Seitenzahlen. Die Existenz eines ${parsed.gericht}-Urteils aus ${parsed.jahr} wurde bestätigt, aber Seite ${parsed.seite} muss in ${parsed.zeitschrift} oder beck-online manuell geprüft werden.`,
         };
       }
-    } catch (_) {}
+    } catch {}
     return {
       ...base,
       gefunden: false,

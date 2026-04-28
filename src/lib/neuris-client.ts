@@ -7,6 +7,7 @@
  */
 
 import { LRUCache } from "./cache.js";
+import { fetchWithRetry } from "./http-client.js";
 
 const BASE_URL = "https://testphase.rechtsinformationen.bund.de";
 const DEFAULT_SIZE = 10;
@@ -99,10 +100,9 @@ async function fetchJson<T>(url: string): Promise<T> {
   const cached = cache.get(url);
   if (cached) return JSON.parse(cached) as T;
 
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(15_000),
-  });
+  }, { timeoutMs: 15_000, source: "NeuRIS" });
 
   if (!res.ok) {
     throw new Error(`NeuRIS API error: ${res.status} ${res.statusText} — ${url}`);
@@ -117,9 +117,7 @@ async function fetchText(url: string): Promise<string> {
   const cached = cache.get(url);
   if (cached) return cached;
 
-  const res = await fetch(url, {
-    signal: AbortSignal.timeout(15_000),
-  });
+  const res = await fetchWithRetry(url, {}, { timeoutMs: 15_000, source: "NeuRIS" });
 
   if (!res.ok) {
     throw new Error(`NeuRIS API error: ${res.status} ${res.statusText} — ${url}`);

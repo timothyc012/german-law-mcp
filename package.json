@@ -7,16 +7,42 @@
   "bin": {
     "german-law-mcp": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "german-law",
+    "legaltech",
+    "bundesrecht",
+    "neuris",
+    "gesetze-im-internet",
+    "eur-lex"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timothyc012/german-law-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/timothyc012/german-law-mcp/issues"
+  },
+  "homepage": "https://github.com/timothyc012/german-law-mcp#readme",
+  "author": "timothyc012",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" --max-warnings=0",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "verify:regression": "node scripts/legal-regression-guard.mjs",
     "verify:docs": "node scripts/check-doc-sync.mjs",
     "verify:live-law": "node scripts/legal-verify.mjs",
-    "verify": "npm run typecheck && npm run verify:regression && npm run verify:docs",
+    "smoke:mcp": "node scripts/mcp-smoke.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run verify:regression && npm run verify:docs",
     "score": "node scripts/scorecard.mjs",
     "start": "node dist/index.js",
     "dev": "tsc --watch"

@@ -10,6 +10,7 @@
  */
 
 import { LRUCache } from "./cache.js";
+import { fetchWithRetry } from "./http-client.js";
 
 const cache = new LRUCache<StateLawSection>(200, 3_600_000);
 
@@ -246,14 +247,12 @@ async function fetchBayernSection(docId: string, section?: string): Promise<Stat
   if (cached) return cached;
 
   try {
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; german-law-mcp/0.5.0)",
         "Accept": "text/html,application/xhtml+xml",
         "Accept-Language": "de-DE,de;q=0.9",
       },
-      signal: AbortSignal.timeout(10000),
-    });
+    }, { timeoutMs: 10_000, source: "gesetze-bayern.de" });
     if (!res.ok) return null;
 
     const html = await res.text();

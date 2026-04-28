@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { findLaw } from "../lib/law-abbreviations.js";
 import { LRUCache } from "../lib/cache.js";
+import { fetchWithRetry } from "../lib/http-client.js";
 
 const GII_BASE = "https://www.gesetze-im-internet.de";
 const cache = new LRUCache<string>(100, 3_600_000);
@@ -40,9 +41,7 @@ export async function getLawToc(input: GetLawTocInput): Promise<string> {
     if (cached) {
       html = cached;
     } else {
-      const res = await fetch(url, {
-        signal: AbortSignal.timeout(15_000),
-      });
+      const res = await fetchWithRetry(url, {}, { timeoutMs: 15_000, source: "GII TOC page" });
       if (!res.ok) {
         throw new Error(`GII error: ${res.status} — ${url}`);
       }
@@ -96,13 +95,6 @@ function parseToc(html: string): TocItem[] {
   if (!tocMatch) return items;
 
   const tocHtml = tocMatch[1];
-
-  // Pattern for structural headers (Buch, Teil, Kapitel, Abschnitt, Unterabschnitt, Titel)
-  const headerPattern = /<(?:h[1-4]|div|span|p)[^>]*>\s*(?:<[^>]*>)*\s*((?:Buch|Teil|Kapitel|Abschnitt|Unterabschnitt|Titel)\s+\d+[^<]*)/gi;
-  let match;
-
-  // Pattern for section links: § NNN or Art. NNN
-  const sectionPattern = /<a[^>]*href="[^"]*?(__[^"]*\.html)"[^>]*>\s*((?:§|Art\.?)\s*\d+[^<]*)<\/a>/gi;
 
   // Combined approach: go through HTML line by line
   const allLines = tocHtml.split("\n");

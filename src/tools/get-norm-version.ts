@@ -18,6 +18,7 @@
 
 import { z } from "zod";
 import { getLawSection } from "../lib/gii-client.js";
+import { fetchWithRetry } from "../lib/http-client.js";
 
 // ── Schema ────────────────────────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ async function findWaybackSnapshot(
     `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(targetUrl)}&output=json&limit=3&fl=timestamp,statuscode,original&from=${ts}&to=${ts.slice(0, 8)}235959&filter=statuscode:200&collapse=digest`;
 
   try {
-    const resp = await fetch(cdxUrl, { signal: AbortSignal.timeout(8000) });
+    const resp = await fetchWithRetry(cdxUrl, {}, { timeoutMs: 8_000, source: "Wayback CDX" });
     if (!resp.ok) return null;
     const data: string[][] = await resp.json();
     if (!data || data.length < 2) return null; // erste Zeile = Header
@@ -73,7 +74,7 @@ async function findWaybackSnapshot(
 async function fetchWaybackContent(timestamp: string, originalUrl: string): Promise<string | null> {
   const waybackUrl = `https://web.archive.org/web/${timestamp}/${originalUrl}`;
   try {
-    const resp = await fetch(waybackUrl, { signal: AbortSignal.timeout(12000) });
+    const resp = await fetchWithRetry(waybackUrl, {}, { timeoutMs: 12_000, source: "Wayback snapshot" });
     if (!resp.ok) return null;
     const html = await resp.text();
     return html;
@@ -255,7 +256,7 @@ export async function getNormVersion(input: GetNormVersionInput): Promise<string
   try {
     const section = await getLawSection(gesetz, paragraph);
     aktuellerText = section.content;
-  } catch (_) {
+  } catch {
     aktuellerText = null;
   }
 
