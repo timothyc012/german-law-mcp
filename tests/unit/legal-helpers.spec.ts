@@ -133,4 +133,17 @@ describe("search-law fallback behaviour", () => {
     expect(output).toContain("법률 개념 사전 (Concept Map)");
     expect(output).toContain("§ 536 BGB");
   });
+
+  it("retries legislation search with expanded legal terms for colloquial Korean queries", async () => {
+    mockSearchLegislation.mockResolvedValue({ totalItems: 0, items: [] });
+    mockSearchTocByAbbreviation.mockResolvedValue(null);
+
+    const { searchLaw } = await loadSearchLaw();
+    const output = await searchLaw({ query: "중고차 샀는데 고장남", size: 5 });
+
+    expect(mockSearchLegislation).toHaveBeenCalledTimes(2);
+    expect(mockSearchLegislation.mock.calls[1]?.[0]).toContain("Sachmangel");
+    expect(output).toContain("검색어 확장 (Query Expansion)");
+    expect(output).toContain("§ 437 BGB");
+  });
 });

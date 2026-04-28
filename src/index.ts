@@ -124,8 +124,8 @@ server.registerTool(
   "search_law",
   {
     description:
-      "Search German federal legislation by keyword. Returns matching laws with relevant text excerpts. " +
-      "Use German legal terms for best results (e.g., 'Kaufvertrag', 'Mietrecht', 'Datenschutz', 'BGB').",
+      "Search German federal legislation by keyword or colloquial issue description. Returns matching laws with relevant text excerpts. " +
+      "Falls back to German legal-term query expansion when the original query has no results.",
     inputSchema: searchLawSchema.shape,
   },
   async (params) => {
@@ -170,7 +170,7 @@ server.registerTool(
   "search_case_law",
   {
     description:
-      "Search German federal court decisions. Covers all 7 federal courts: " +
+      "Search German federal court decisions by keyword or colloquial issue description. Covers all 7 federal courts: " +
       "BGH, BVerfG, BVerwG, BFH, BAG, BSG, BPatG (81,924 decisions total). Optionally filter by court.",
     inputSchema: searchCaseLawSchema.shape,
   },

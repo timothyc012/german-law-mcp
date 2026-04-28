@@ -9,13 +9,15 @@ import { z } from "zod";
 import { searchLegislation } from "../lib/neuris-client.js";
 import { searchTocByAbbreviation } from "../lib/gii-client.js";
 import { searchConceptMap } from "../lib/concept-map.js";
+import { expandLegalQuery, type QueryExpansion } from "../lib/query-expansion.js";
 
 export const searchLawSchema = z.object({
   query: z.string().describe("검색어 (예: 'Kaufvertrag', 'Mietrecht', 'Datenschutz', 'BGB')"),
   size: z.number().min(1).max(50).optional().default(10).describe("결과 수 (기본 10, 최대 50)"),
+  expandQuery: z.boolean().optional().default(true).describe("결과가 없을 때 일상어를 독일어 법률 용어로 확장해 재검색할지 여부."),
 });
 
-export type SearchLawInput = z.infer<typeof searchLawSchema>;
+export type SearchLawInput = z.input<typeof searchLawSchema>;
 
 function buildConceptSection(query: string): string[] {
   const matches = searchConceptMap(query);
@@ -30,21 +32,45 @@ function buildConceptSection(query: string): string[] {
   ];
 }
 
+function buildExpansionSection(expansion: QueryExpansion, usedForSearch: boolean): string[] {
+  if (!expansion.wasExpanded) return [];
+  return [
+    "━━━ 검색어 확장 (Query Expansion) ━━━",
+    "",
+    `원문: ${expansion.originalQuery}`,
+    `확장 검색어: ${expansion.expandedQuery}`,
+    `확장 근거: ${expansion.reasons.join(", ")}`,
+    usedForSearch ? "적용: 원문 검색 결과가 없어 확장 검색을 사용했습니다." : "적용: 원문 검색 결과가 있어 확장 검색은 실행하지 않았습니다.",
+    "",
+  ];
+}
+
 export async function searchLaw(input: SearchLawInput): Promise<string> {
-  const { query, size } = input;
+  const { query, size, expandQuery } = searchLawSchema.parse(input);
 
   try {
     // Concept Map은 항상 상단에 표시
-    const conceptSection = buildConceptSection(query);
+    const expansion = expandQuery ? expandLegalQuery(query) : null;
+    const conceptSection = buildConceptSection(expansion?.expandedQuery ?? query);
 
     // 1차: NeuRIS 법령 검색
-    const result = await searchLegislation(query, size);
+    let result = await searchLegislation(query, size);
+    let searchQuery = query;
+    let usedExpansion = false;
+
+    if (result.totalItems === 0 && expansion?.wasExpanded) {
+      result = await searchLegislation(expansion.expandedQuery, size);
+      searchQuery = expansion.expandedQuery;
+      usedExpansion = true;
+    }
 
     if (result.totalItems > 0) {
       const lines: string[] = [
         `[VERIFIED — NeuRIS API] ${new Date().toISOString().slice(0, 10)}`,
         `[법령 검색결과: "${query}" — ${result.totalItems}건]`,
+        searchQuery !== query ? `[실제 검색어: "${searchQuery}"]` : "",
         "",
+        ...(expansion ? buildExpansionSection(expansion, usedExpansion) : []),
         ...conceptSection,
       ];
 
@@ -93,6 +119,7 @@ export async function searchLaw(input: SearchLawInput): Promise<string> {
         "NeuRIS 법령 검색과 GII 목차에서 결과를 찾지 못했습니다.",
         "법률 개념 사전에서 다음 관련 조문을 찾았습니다:",
         "",
+        ...(expansion ? buildExpansionSection(expansion, usedExpansion) : []),
         ...conceptSection,
         "💡 get_law_section 도구로 구체적인 조문을 조회하세요.",
       ];

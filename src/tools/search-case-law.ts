@@ -7,8 +7,9 @@
  */
 
 import { z } from "zod";
-import { searchCaseLaw } from "../lib/neuris-client.js";
+import { searchCaseLaw as searchCaseLawApi } from "../lib/neuris-client.js";
 import { findCourt, ALL_COURTS } from "../lib/court-map.js";
+import { expandLegalQuery, type QueryExpansion } from "../lib/query-expansion.js";
 
 export const searchCaseLawSchema = z.object({
   query: z.string().describe("검색어 (예: 'Mietvertrag Kündigung', 'Kaufvertrag Mangel')"),
@@ -17,12 +18,26 @@ export const searchCaseLawSchema = z.object({
     .optional()
     .describe(`법원 코드 (선택). 가능한 값: ${ALL_COURTS.join(", ")}. 생략 시 전체 검색.`),
   size: z.number().min(1).max(50).optional().default(10).describe("결과 수 (기본 10, 최대 50)"),
+  expandQuery: z.boolean().optional().default(true).describe("결과가 없을 때 일상어를 독일어 법률 용어로 확장해 재검색할지 여부."),
 });
 
-export type SearchCaseLawInput = z.infer<typeof searchCaseLawSchema>;
+export type SearchCaseLawInput = z.input<typeof searchCaseLawSchema>;
+
+function buildExpansionSection(expansion: QueryExpansion, usedForSearch: boolean): string[] {
+  if (!expansion.wasExpanded) return [];
+  return [
+    "━━━ 검색어 확장 (Query Expansion) ━━━",
+    "",
+    `원문: ${expansion.originalQuery}`,
+    `확장 검색어: ${expansion.expandedQuery}`,
+    `확장 근거: ${expansion.reasons.join(", ")}`,
+    usedForSearch ? "적용: 원문 검색 결과가 없어 확장 검색을 사용했습니다." : "적용: 원문 검색 결과가 있어 확장 검색은 실행하지 않았습니다.",
+    "",
+  ];
+}
 
 export async function searchCaseLawTool(input: SearchCaseLawInput): Promise<string> {
-  const { query, court, size } = input;
+  const { query, court, size, expandQuery } = searchCaseLawSchema.parse(input);
 
   try {
     // 법원 코드 정규화
@@ -37,16 +52,33 @@ export async function searchCaseLawTool(input: SearchCaseLawInput): Promise<stri
       courtLabel = `${courtInfo.neurisId} (${courtInfo.nameKo})`;
     }
 
-    const result = await searchCaseLaw(query, neurisCourt, size);
+    const expansion = expandQuery ? expandLegalQuery(query) : null;
+    let result = await searchCaseLawApi(query, neurisCourt, size);
+    let searchQuery = query;
+    let usedExpansion = false;
+
+    if (result.totalItems === 0 && expansion?.wasExpanded) {
+      result = await searchCaseLawApi(expansion.expandedQuery, neurisCourt, size);
+      searchQuery = expansion.expandedQuery;
+      usedExpansion = true;
+    }
 
     if (result.totalItems === 0) {
-      return `[판례 검색결과: "${query}" — ${courtLabel} — 0건]\n\n검색 결과가 없습니다. 다른 키워드로 검색해 보세요.`;
+      const lines = [
+        `[판례 검색결과: "${query}" — ${courtLabel} — 0건]`,
+        "",
+        ...(expansion ? buildExpansionSection(expansion, usedExpansion) : []),
+        "검색 결과가 없습니다. 다른 키워드나 독일어 법률 용어로 검색해 보세요.",
+      ];
+      return lines.join("\n");
     }
 
     const lines: string[] = [
       `[VERIFIED — NeuRIS API] ${new Date().toISOString().slice(0, 10)}`,
       `[판례 검색결과: "${query}" — ${courtLabel} — ${result.totalItems}건]`,
+      searchQuery !== query ? `[실제 검색어: "${searchQuery}"]` : "",
       "",
+      ...(expansion ? buildExpansionSection(expansion, usedExpansion) : []),
     ];
 
     for (let i = 0; i < result.items.length; i++) {
