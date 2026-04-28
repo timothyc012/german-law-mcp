@@ -76,17 +76,46 @@ export interface UnifiedSearchResult {
 
 // ── 내부 유틸 ──
 
-const NeurisCollectionMemberSchema = z.object({}).passthrough();
+const NeurisRecordSchema = z.object({}).passthrough();
+const NeurisTextMatchSchema = z.object({
+  name: z.string().nullable().optional(),
+  text: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+}).passthrough();
+
+const NeurisCollectionMemberSchema = z.object({
+  item: NeurisRecordSchema.optional(),
+  textMatches: z.array(NeurisTextMatchSchema).nullable().optional(),
+}).passthrough();
 
 const NeurisCollectionSchema = z.object({
   totalItems: z.number().nullable().optional(),
   member: z.array(NeurisCollectionMemberSchema).nullable().optional(),
 }).passthrough();
 
+const NeurisCourtEntrySchema = z.object({
+  id: z.string(),
+  count: z.number(),
+  label: z.string(),
+}).passthrough();
+
 type NeurisCollectionPayload = z.infer<typeof NeurisCollectionSchema>;
+type NeurisRecordPayload = z.infer<typeof NeurisRecordSchema>;
 
 export function parseNeurisCollection(data: unknown, context: string): NeurisCollectionPayload {
-  const parsed = NeurisCollectionSchema.safeParse(data);
+  return parseNeurisPayload(NeurisCollectionSchema, data, context);
+}
+
+export function parseNeurisObject(data: unknown, context: string): NeurisRecordPayload {
+  return parseNeurisPayload(NeurisRecordSchema, data, context);
+}
+
+export function parseNeurisCourts(data: unknown, context: string): CourtEntry[] {
+  return parseNeurisPayload(z.array(NeurisCourtEntrySchema), data, context);
+}
+
+function parseNeurisPayload<T>(schema: z.ZodType<T>, data: unknown, context: string): T {
+  const parsed = schema.safeParse(data);
   if (parsed.success) {
     return parsed.data;
   }
@@ -278,7 +307,7 @@ export async function searchCaseLaw(
  */
 export async function getCaseLawMeta(documentNumber: string): Promise<CaseLawItem> {
   const url = `${BASE_URL}/v1/case-law/${encodeURIComponent(documentNumber)}`;
-  const data = await fetchJson<any>(url);
+  const data = parseNeurisObject(await fetchJson<unknown>(url), "case-law meta");
   return parseCaseLawItem({ item: data, textMatches: [] });
 }
 
@@ -295,7 +324,7 @@ export async function getCaseLawHtml(documentNumber: string): Promise<string> {
  */
 export async function getCourts(): Promise<CourtEntry[]> {
   const url = `${BASE_URL}/v1/case-law/courts`;
-  return fetchJson<CourtEntry[]>(url);
+  return parseNeurisCourts(await fetchJson<unknown>(url), "case-law courts");
 }
 
 /**
