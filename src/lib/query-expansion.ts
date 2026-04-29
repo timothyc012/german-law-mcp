@@ -45,6 +45,41 @@ const COLLOQUIAL_RULES: ExpansionRule[] = [
     terms: ["Verzug", "Mahnung", "Schadensersatz", "Zahlungspflicht", "§ 286 BGB", "§ 288 BGB", "§ 280 BGB"],
     reason: "payment delay colloquial query",
   },
+  {
+    patterns: ["이혼", "양육권", "양육비", "친권", "unterhalt kind", "scheidung", "sorgerecht"],
+    terms: ["Familienrecht", "Scheidung", "Unterhalt", "Sorgerecht", "BGB", "FamFG"],
+    reason: "family-law colloquial query",
+  },
+  {
+    patterns: ["폭행", "사기", "절도", "고소", "형사", "맞았", "사기당", "anzeige betrug", "körperverletzung"],
+    terms: ["Strafrecht", "Betrug", "Körperverletzung", "Diebstahl", "Strafanzeige", "§ 263 StGB", "§ 223 StGB", "§ 242 StGB"],
+    reason: "criminal-law colloquial query",
+  },
+  {
+    patterns: ["행정처분", "허가 거부", "비자 거절", "이의신청", "widerspruch behörde", "bescheid bekommen"],
+    terms: ["Verwaltungsakt", "Widerspruch", "Anfechtungsklage", "Verwaltungsverfahren", "§ 70 VwGO", "§ 74 VwGO", "VwVfG"],
+    reason: "administrative-law colloquial query",
+  },
+  {
+    patterns: ["세금", "부가세", "소득세", "세무서", "steuerbescheid", "umsatzsteuer", "einkommensteuer"],
+    terms: ["Steuerrecht", "Einkommensteuer", "Umsatzsteuer", "Steuerbescheid", "EStG", "UStG", "Abgabenordnung"],
+    reason: "tax-law colloquial query",
+  },
+  {
+    patterns: ["gmbh", "대표 책임", "파산 지연", "회사 설립", "geschäftsführer haftung", "insolvenzverschleppung"],
+    terms: ["GmbH", "Geschäftsführerhaftung", "Insolvenzverschleppung", "Stammkapital", "§ 1 GmbHG", "§ 5 GmbHG", "§ 15a InsO"],
+    reason: "company-law colloquial query",
+  },
+  {
+    patterns: ["교통사고", "차 사고", "보험 처리", "뺑소니", "autounfall", "verkehrsunfall", "kfz schaden"],
+    terms: ["Verkehrsunfall", "Halterhaftung", "Schadensersatz", "Schmerzensgeld", "§ 7 StVG", "§ 823 BGB", "§ 253 BGB"],
+    reason: "traffic-accident colloquial query",
+  },
+  {
+    patterns: ["온라인 주문", "구독 취소", "무료체험", "자동결제", "abo kündigen", "widerruf online", "online bestellt"],
+    terms: ["Verbraucherrecht", "Fernabsatz", "Widerrufsrecht", "AGB", "§ 312c BGB", "§ 355 BGB", "§ 307 BGB"],
+    reason: "consumer-rights colloquial query",
+  },
 ];
 
 export function expandLegalQuery(query: string): QueryExpansion {

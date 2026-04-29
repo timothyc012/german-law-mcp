@@ -10,7 +10,7 @@ import { LRUCache } from "../lib/cache.js";
 import { fetchWithRetry } from "../lib/http-client.js";
 
 const GII_BASE = "https://www.gesetze-im-internet.de";
-const cache = new LRUCache<string>(100, 3_600_000);
+const cache = new LRUCache<string>(100, 3_600_000, { persistenceName: "get-law-toc" });
 
 export const getLawTocSchema = z.object({
   law: z.string().describe("법률 약어 (예: 'BGB', 'StGB', 'GG')"),

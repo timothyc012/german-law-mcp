@@ -1,7 +1,7 @@
 /**
  * get-state-law-section.ts — 독일 주법 조문 조회 도구
  *
- * Bayern: 실시간 HTML 파싱으로 조문 원문 반환
+ * Bayern/NRW: 실시간 HTML 파싱으로 조문 원문 반환 시도
  * 그 외 주: 법령 정보 + 포털 직접 접근 URL 반환
  */
 
@@ -78,13 +78,13 @@ export async function getStateLawSectionTool(input: GetStateLawSectionInput): Pr
     lines.push("");
     lines.push(`조회일시: ${result.fetchedAt.slice(0, 19).replace("T", " ")} UTC`);
 
-    // ── Bayern 이외 주 추가 안내 ───────────────────────────────────────────────
-    if (sc !== "BY") {
+    // ── 아직 직접 파싱하지 않는 주 추가 안내 ───────────────────────────────────
+    if (!["BY", "NW"].includes(sc)) {
       lines.push("");
       lines.push("─".repeat(50));
       lines.push("ℹ️  이 주의 법령 포털은 JavaScript 렌더링이 필요합니다.");
       lines.push("   조문 원문은 위 URL을 브라우저에서 직접 열어 확인하세요.");
-      lines.push("   Bayern(BY) 법령은 이 도구로 원문 직접 조회 가능합니다.");
+      lines.push("   Bayern(BY) 및 Nordrhein-Westfalen(NW)은 이 도구로 원문 직접 조회를 시도합니다.");
     }
 
     return lines.join("\n");

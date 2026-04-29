@@ -26,4 +26,16 @@ describe("expandLegalQuery", () => {
     expect(expansion.wasExpanded).toBe(false);
     expect(expansion.expandedQuery).toBe("Bundesgericht Aktenzeichen");
   });
+
+  it.each([
+    ["교통사고 보험 처리", "§ 7 StVG"],
+    ["비자 거절 이의신청", "§ 70 VwGO"],
+    ["GmbH 대표 책임 파산 지연", "§ 15a InsO"],
+    ["온라인 주문 구독 취소", "§ 355 BGB"],
+  ])("expands %s", (query, expectedTerm) => {
+    const expansion = expandLegalQuery(query);
+
+    expect(expansion.wasExpanded).toBe(true);
+    expect(expansion.expandedQuery).toContain(expectedTerm);
+  });
 });

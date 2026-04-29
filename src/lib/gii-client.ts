@@ -12,7 +12,7 @@ import { findLaw, buildGiiSectionUrl } from "./law-abbreviations.js";
 
 const GII_BASE = "https://www.gesetze-im-internet.de";
 
-const cache = new LRUCache<string>(300, 3_600_000);
+const cache = new LRUCache<string>(300, 3_600_000, { persistenceName: "gii-client" });
 
 // ── 타입 ──
 

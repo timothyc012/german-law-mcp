@@ -45,10 +45,10 @@ const SECTION_LABEL: Record<CaseTextSection, string> = {
 };
 
 const SECTION_PATTERNS: Record<Exclude<CaseTextSection, "full">, RegExp[]> = {
-  summary: [/Leits[aä]tz(?:e)?/i, /Orientierungss[aä]tz(?:e)?/i],
-  tenor: [/Tenor/i],
+  summary: [/Leits[aä]tz(?:e)?/i, /amtlicher\s+Leits[aä]tz/i, /Orientierungss[aä]tz(?:e)?/i],
+  tenor: [/Tenor/i, /Entscheidungsformel/i],
   facts: [/Tatbestand/i, /Sachverhalt/i],
-  reasons: [/Entscheidungsgr[üu]nde/i, /Gr[üu]nde/i],
+  reasons: [/Entscheidungsgr[üu]nde/i, /Gr[üu]nde/i, /Aus\s+den\s+Gr[üu]nden/i],
 };
 
 const ALL_SECTION_HEADINGS = [
@@ -125,23 +125,14 @@ export async function getCaseText(input: GetCaseTextInput): Promise<string> {
 }
 
 export function stripHtml(html: string): string {
-  return html
+  return decodeHtmlEntities(html
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/?(p|div|h[1-6]|section|article|header|footer|table|tr|ul|ol|blockquote)[^>]*>/gi, "\n")
     .replace(/<li[^>]*>/gi, "\n  - ")
     .replace(/<td[^>]*>/gi, " | ")
     .replace(/<[^>]+>/g, "")
-    .replace(/&sect;/g, "§")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&bdquo;/g, "„")
-    .replace(/&ldquo;/g, "“")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
     .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ \t]+/g, " ")
+    .replace(/[ \t]+/g, " "))
     .trim();
 }
 
@@ -208,7 +199,10 @@ function findHeadingLine(text: string, pattern: RegExp): number {
 
 function isHeadingLine(line: string, pattern: RegExp): boolean {
   const normalized = line.trim().replace(/:$/, "");
-  return normalized.length > 0 && normalized.length <= 80 && pattern.test(normalized);
+  if (normalized.length === 0 || normalized.length > 100) {
+    return false;
+  }
+  return pattern.test(normalized) && /^[A-ZÄÖÜ][A-Za-zÄÖÜäöüß\s.-]+$/.test(normalized);
 }
 
 function sliceTextWindow(text: string, offset: number, maxChars: number) {
@@ -221,4 +215,30 @@ function sliceTextWindow(text: string, offset: number, maxChars: number) {
     total: text.length,
     hasMore: end < text.length,
   };
+}
+
+function decodeHtmlEntities(text: string): string {
+  const named: Record<string, string> = {
+    amp: "&",
+    apos: "'",
+    bdquo: "„",
+    gt: ">",
+    ldquo: "“",
+    lt: "<",
+    nbsp: " ",
+    quot: '"',
+    sect: "§",
+    szlig: "ß",
+    auml: "ä",
+    ouml: "ö",
+    uuml: "ü",
+    Auml: "Ä",
+    Ouml: "Ö",
+    Uuml: "Ü",
+  };
+
+  return text
+    .replace(/&([A-Za-z]+);/g, (match, name: string) => named[name] ?? match)
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
+    .replace(/&#x([\da-fA-F]+);/g, (_, code: string) => String.fromCharCode(Number.parseInt(code, 16)));
 }

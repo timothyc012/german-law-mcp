@@ -37,4 +37,28 @@ describe("review-contract-clauses", () => {
     expect(output).toContain("Kontext-Hinweis");
     expect(output).not.toContain("Gesamtampel: HOCH");
   });
+
+  it("flags automatic renewal and suggests safer drafting", async () => {
+    const output = await reviewContractClauses({
+      text: "Die Laufzeit beträgt 24 Monate. Der Vertrag verlängert sich automatisch um 12 Monate, wenn nicht schriftlich gekündigt wird.",
+      context: "b2c",
+      language: "de",
+    });
+
+    expect(output).toContain("§ 309 Nr. 9 BGB");
+    expect(output).toContain("§ 309 Nr. 13 BGB");
+    expect(output).toContain("Sicherere Richtung");
+  });
+
+  it("can suppress drafting suggestions for compact screening", async () => {
+    const output = await reviewContractClauses({
+      text: "Die Kündigung ist nur per Einschreiben und eigenhändig unterschrieben möglich.",
+      context: "b2c",
+      language: "de",
+      includeSuggestions: false,
+    });
+
+    expect(output).toContain("§ 309 Nr. 13 BGB");
+    expect(output).not.toContain("Sicherere Richtung");
+  });
 });

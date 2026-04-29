@@ -71,4 +71,23 @@ describe("get_case_text", () => {
     expect(selected.text).toBe("Headline only");
     expect(selected.warning).toContain("NeuRIS-Headline");
   });
+
+  it("recognizes alternative headings and decodes German HTML entities", async () => {
+    vi.mocked(getCaseLawHtml).mockResolvedValue(`
+      <h2>Entscheidungsformel</h2>
+      <p>Die Klage wird abgewiesen.</p>
+      <h2>Aus den Gr&uuml;nden</h2>
+      <p>Die Revision bleibt ohne Erfolg &sect; 434 BGB.</p>
+    `);
+
+    const output = await getCaseText({
+      documentNumber: "JURETEST",
+      section: "reasons",
+      maxChars: 1000,
+    });
+
+    expect(output).toContain("요청 구간: Entscheidungsgründe");
+    expect(output).toContain("Die Revision bleibt ohne Erfolg § 434 BGB.");
+    expect(output).not.toContain("Die Klage wird abgewiesen.");
+  });
 });

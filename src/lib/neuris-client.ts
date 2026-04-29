@@ -14,7 +14,7 @@ const BASE_URL = "https://testphase.rechtsinformationen.bund.de";
 const DEFAULT_SIZE = 10;
 const MAX_SIZE = 50;
 
-const cache = new LRUCache<string>(500, 3_600_000);
+const cache = new LRUCache<string>(500, 3_600_000, { persistenceName: "neuris-client" });
 
 // ── 타입 ──
 

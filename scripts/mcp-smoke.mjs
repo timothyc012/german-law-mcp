@@ -9,7 +9,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
-const EXPECTED_TOOL_COUNT = 33;
+const EXPECTED_TOOL_COUNT = 34;
 
 async function main() {
   const transport = new StdioClientTransport({
@@ -33,7 +33,7 @@ async function main() {
       throw new Error(`Expected ${EXPECTED_TOOL_COUNT} tools, got ${tools.length}`);
     }
 
-    for (const required of ["search_law", "get_law_section", "lookup_legal_term", "risk_alert", "review_contract_clauses", "chain_full_research"]) {
+    for (const required of ["search_law", "get_law_section", "lookup_legal_term", "risk_alert", "review_contract_clauses", "chain_full_research", "source_health_check"]) {
       if (!toolNames.has(required)) {
         throw new Error(`Required tool missing from MCP listTools: ${required}`);
       }

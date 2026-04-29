@@ -3,7 +3,8 @@
  *
  * 전략:
  *   - Bayern: gesetze-bayern.de — GET /Content/Document/{ABBR} 직접 파싱 가능
- *   - Berlin/Hamburg/Hessen/BW/NRW: juris GmbH 엔진 기반 SPA — 약어 직접 URL 매핑
+ *   - NRW: recht.nrw.de HTML에서 조문 텍스트 추출 시도
+ *   - Berlin/Hamburg/Hessen/BW: juris GmbH 엔진 기반 SPA — 약어 직접 URL 매핑
  *   - 모든 주: 알려진 주요 법령 약어 사전(KNOWN_STATE_LAWS)으로 검색 지원
  *
  * 지원 주: BY, BE, HH, HE, BW, NW, NI, SN, TH, BB, MV, RP, SL, ST, SH
@@ -12,7 +13,7 @@
 import { LRUCache } from "./cache.js";
 import { fetchWithRetry } from "./http-client.js";
 
-const cache = new LRUCache<StateLawSection>(200, 3_600_000);
+const cache = new LRUCache<StateLawSection>(200, 3_600_000, { persistenceName: "state-law-client" });
 
 // ── 타입 ────────────────────────────────────────────────────────────────────
 
@@ -309,6 +310,77 @@ async function fetchBayernSection(docId: string, section?: string): Promise<Stat
   }
 }
 
+async function fetchNrwSection(entry: StateLawEntry, section?: string): Promise<StateLawSection | null> {
+  const cacheKey = `nrw:${entry.docId}:${section ?? "full"}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const res = await fetchWithRetry(entry.url, {
+      headers: {
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "de-DE,de;q=0.9",
+      },
+    }, { timeoutMs: 12_000, source: "recht.nrw.de" });
+    if (!res.ok) return null;
+
+    const html = await res.text();
+    const text = stripStateLawHtml(html);
+    const extracted = section ? extractStateLawSectionText(text, section) : text.slice(0, 12_000);
+    const content = extracted?.trim() || "(Inhalt konnte nicht automatisch extrahiert werden — bitte Portal direkt besuchen)";
+
+    const result: StateLawSection = {
+      state: "NW",
+      stateName: "Nordrhein-Westfalen",
+      law: entry.abbreviation,
+      lawName: entry.fullName,
+      section: section ?? "gesamt",
+      title: section ? `§ ${section} ${entry.abbreviation}` : entry.fullName,
+      content,
+      url: entry.url,
+      fetchedAt: new Date().toISOString(),
+    };
+
+    cache.set(cacheKey, result);
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+export function stripStateLawHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?(p|div|h[1-6]|section|article|tr|li)[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&sect;/g, "§")
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+export function extractStateLawSectionText(text: string, section: string): string | null {
+  const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const sectionHeading = new RegExp(`^\\s*(?:§\\s*)?${escaped}(?:\\s|\\.|$)`, "i");
+  const anySectionHeading = /^\s*(?:§\s*)?\d+[a-z]?(?:\s|\.|$)/i;
+  const lines = text.split("\n");
+  const startLine = lines.findIndex((line) => sectionHeading.test(line));
+
+  if (startLine < 0) {
+    return null;
+  }
+
+  const nextLine = lines.findIndex((line, index) => index > startLine && anySectionHeading.test(line));
+  const endLine = nextLine >= 0 ? nextLine : lines.length;
+  return lines.slice(startLine, endLine).join("\n").trim();
+}
+
 // ── 공개 함수 ────────────────────────────────────────────────────────────────
 
 /**
@@ -362,7 +434,6 @@ export async function getStateLawSection(opts: {
     return fetchBayernSection(docId, section);
   }
 
-  // 그 외 주: 법령 정보 반환 (URL 안내)
   const entry = KNOWN_STATE_LAWS.find(
     (e) => e.state === state &&
       (e.abbreviation.toLowerCase() === law.toLowerCase() ||
@@ -370,6 +441,11 @@ export async function getStateLawSection(opts: {
   );
 
   if (!entry) return null;
+
+  if (state === "NW") {
+    const nrwResult = await fetchNrwSection(entry, section);
+    if (nrwResult) return nrwResult;
+  }
 
   const sectionNote = section
     ? `§ ${section} 조회를 위해 아래 포털 URL을 직접 방문하세요.`
