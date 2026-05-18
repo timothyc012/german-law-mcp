@@ -6,7 +6,7 @@
  * 독일 연방법률 검색 및 조회를 위한 MCP 서버.
  * NeuRIS API + Gesetze im Internet을 데이터 소스로 사용한다.
  *
- * 도구 목록 (34개):
+ * 도구 목록 (37개):
  * ── 기본 검색 ──────────────────────────────────────────
  *  1. search_law          — 법률 키워드 검색 (GII + Concept Map)
  *  2. get_law_section     — 특정 조문 전문 조회
@@ -49,6 +49,10 @@
  * 32. review_contract_clauses — AGB-Kontrolle nach BGB §§ 307-309
  * 33. chain_full_research   — 종합 법률 리서치 보고서 워크플로우
  * 34. source_health_check   — 외부 법률 데이터 소스 상태 점검
+ * ── BMF 행정해석 (Phase 8) ────────────────────────────
+ * 35. search_bmf_schreiben  — BMF-Schreiben 검색 (등급 A, 1차 행정해석)
+ * 36. get_bmf_schreiben     — BMF-Schreiben 전문 조회 (URL 또는 AZ)
+ * 37. verify_bmf_citation   — BMF 인용 검증 (환각 방지)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -106,18 +110,25 @@ import { reviewContractClausesSchema, reviewContractClauses } from "./tools/revi
 import { chainFullResearchSchema, chainFullResearch } from "./tools/chain-full-research.js";
 import { sourceHealthCheckSchema, sourceHealthCheck } from "./tools/source-health-check.js";
 
+// BMF-Schreiben 도구 (Phase 8 — Bundesfinanzministerium 행정해석)
+import { searchBmfSchreibenSchema, searchBmfSchreibenTool } from "./tools/search-bmf-schreiben.js";
+import { getBmfSchreibenSchema, getBmfSchreiben } from "./tools/get-bmf-schreiben.js";
+import { verifyBmfCitationSchema, verifyBmfCitation } from "./tools/verify-bmf-citation.js";
+
 export const server = new McpServer({
   name: "german-law-mcp",
   version: "0.7.0",
   description:
-    "German law MCP server — 34 tools covering federal legislation, court decisions, " +
+    "German law MCP server — 37 tools covering federal legislation, court decisions, " +
     "fee calculation, deadline computation, citation verification, amendment history, " +
     "legal analysis, German-EU law comparison (EUR-Lex live), delegation chain tracing, " +
     "source grading, cross-reference extraction, 14-gate quality validation, " +
     "state law (Landesrecht) for all 16 German states, legal dictionary (40+ terms), " +
-    "and proactive risk alerts (Verjährung countdown, Frist warnings, cost estimation). " +
+    "proactive risk alerts (Verjährung countdown, Frist warnings, cost estimation), " +
+    "and BMF-Schreiben (Bundesfinanzministerium administrative circulars, grade A). " +
     "Data: NeuRIS (81,924 federal decisions) + gesetze-im-internet.de + " +
-    "gesetze-bayern.de (live parsing) + openjur.de (state courts) + EUR-Lex CELLAR API.",
+    "gesetze-bayern.de (live parsing) + openjur.de (state courts) + EUR-Lex CELLAR API + " +
+    "bundesfinanzministerium.de.",
 });
 
 // ── [1] 기본 검색 도구 ─────────────────────────────────────────────────────
@@ -674,6 +685,53 @@ server.registerTool(
   async (params) => {
     const input = sourceHealthCheckSchema.parse(params);
     const result = await sourceHealthCheck(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+// ── [10] BMF-Schreiben 도구 (Phase 8) ─────────────────────────────────────
+
+server.registerTool(
+  "search_bmf_schreiben",
+  {
+    description:
+      "Search BMF (Bundesministerium der Finanzen) administrative circulars (Schreiben). " +
+      "Filters by date range, subject area (Einkommensteuer/Umsatzsteuer/etc.), and Aktenzeichen pattern. " +
+      "Source grade: A (1차 행정해석, BStBl I 게재 기준).",
+    inputSchema: searchBmfSchreibenSchema.shape,
+  },
+  async (params) => {
+    const input = searchBmfSchreibenSchema.parse(params);
+    const result = await searchBmfSchreibenTool(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "get_bmf_schreiben",
+  {
+    description:
+      "Fetch full text of a BMF-Schreiben by URL or Aktenzeichen (+optional date). " +
+      "Returns title, AZ, issue date, subject area, body, and attached PDFs. Source grade: A.",
+    inputSchema: getBmfSchreibenSchema.shape,
+  },
+  async (params) => {
+    const input = getBmfSchreibenSchema.parse(params);
+    const result = await getBmfSchreiben(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "verify_bmf_citation",
+  {
+    description:
+      "Verify a BMF-Schreiben citation (AZ + optional date) against live BMF search to prevent hallucinated references.",
+    inputSchema: verifyBmfCitationSchema.shape,
+  },
+  async (params) => {
+    const input = verifyBmfCitationSchema.parse(params);
+    const result = await verifyBmfCitation(input);
     return { content: [{ type: "text", text: result }] };
   },
 );
