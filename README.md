@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 독일 연방법률 검색·분석을 위한 **Model Context Protocol (MCP) 서버**.  
-34개 도구로 법령 조문, 법률 목차, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교·EUR-Lex 직접 조회, 위임체계 추적, 조문 비교, 계약/AGB 리스크 스크리닝, 종합 리서치 체인, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전, 리스크 조기 경고, 소스 상태 점검까지 커버합니다.
+37개 도구로 법령 조문, 법률 목차, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교·EUR-Lex 직접 조회, 위임체계 추적, 조문 비교, 계약/AGB 리스크 스크리닝, 종합 리서치 체인, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전, 리스크 조기 경고, 소스 상태 점검, BMF-Schreiben(연방재무부 행정해석)까지 커버합니다.
 
 ## 데이터 소스
 
@@ -16,7 +16,7 @@
 | [EUR-Lex CELLAR](https://publications.europa.eu/webapi/rdf/sparql) | EU 법령 실시간 메타데이터 (SPARQL API) | ✅ |
 | Wayback Machine | 법령 역사적 버전 조회 | ✅ |
 
-## 도구 목록 (34개)
+## 도구 목록 (37개)
 
 ### 기본 검색 (6개)
 
@@ -106,6 +106,14 @@
 | 도구 | 설명 |
 |------|------|
 | `source_health_check` | NeuRIS, GII, EUR-Lex, Bayern, openjur 외부 소스 상태 점검 |
+
+### BMF 행정해석 (3개) — Phase 8
+
+| 도구 | 설명 |
+|------|------|
+| `search_bmf_schreiben` | BMF(Bundesministerium der Finanzen) 행정해석 서한 검색 — 등급 A (1차 행정해석, BStBl I 게재 기준), 날짜·분야·AZ 패턴 필터 |
+| `get_bmf_schreiben` | BMF-Schreiben 전문 조회 (URL 또는 AZ + 날짜) — 제목·AZ·발행일·분야·본문·첨부 PDF |
+| `verify_bmf_citation` | BMF 인용(AZ + 날짜) 검증 — 환각 방지용 라이브 매칭 |
 
 ## 설치
 
@@ -226,7 +234,7 @@ risk_alert({
 
 ```
 src/
-├── index.ts              # MCP 서버 진입점 (도구 34개 등록)
+├── index.ts              # MCP 서버 진입점 (도구 37개 등록)
 ├── lib/
 │   ├── neuris-client.ts      # NeuRIS API 클라이언트
 │   ├── gii-client.ts         # gesetze-im-internet.de 클라이언트
@@ -238,7 +246,7 @@ src/
 │   ├── cache.ts              # 응답 캐싱 (TTL 기반)
 │   ├── court-map.ts          # 법원 코드 매핑
 │   └── law-abbreviations.ts  # 법령 약어 데이터베이스 (50+)
-└── tools/                # 도구별 구현 (34개)
+└── tools/                # 도구별 구현 (37개)
     ├── search-law.ts
     ├── get-law-section.ts
     ├── search-case-law.ts
