@@ -107,6 +107,7 @@ import { lookupLegalTermSchema, lookupLegalTerm } from "./tools/lookup-legal-ter
 // 리스크 알림 도구 (Phase 7)
 import { riskAlertSchema, riskAlert } from "./tools/risk-alert.js";
 import { reviewContractClausesSchema, reviewContractClauses } from "./tools/review-contract-clauses.js";
+import { reviewNdaSchema, reviewNda } from "./tools/review-nda.js";
 import { chainFullResearchSchema, chainFullResearch } from "./tools/chain-full-research.js";
 import { sourceHealthCheckSchema, sourceHealthCheck } from "./tools/source-health-check.js";
 
@@ -655,6 +656,23 @@ server.registerTool(
   async (params) => {
     const input = reviewContractClausesSchema.parse(params);
     const result = await reviewContractClauses(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_nda",
+  {
+    description:
+      "NDA-Triage über DE / EU / KR Rechtsordnungen. Prüft 11 Standard-Items (Definition, Zweck, Laufzeit, " +
+      "Rückgabe, Carve-out, Restkenntnisse, Gegenseitigkeit, Abwerbeverbot, Datenschutz, anwendbares Recht, " +
+      "Rechtsbehelfe) gegen GeschGehG / BGB / GDPR / Trade Secrets Directive / 부정경쟁방지법 / 민법 / 개인정보보호법. " +
+      "Liefert Cross-Border-Trigger als JSON-Block für den /contract-review Dispatcher und das tri-council Skill.",
+    inputSchema: reviewNdaSchema.shape,
+  },
+  async (params) => {
+    const input = reviewNdaSchema.parse(params);
+    const result = await reviewNda(input);
     return { content: [{ type: "text", text: result }] };
   },
 );
