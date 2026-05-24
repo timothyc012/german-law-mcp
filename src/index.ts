@@ -6,7 +6,7 @@
  * 독일 연방법률 검색 및 조회를 위한 MCP 서버.
  * NeuRIS API + Gesetze im Internet을 데이터 소스로 사용한다.
  *
- * 도구 목록 (37개):
+ * 도구 목록 (38개):
  * ── 기본 검색 ──────────────────────────────────────────
  *  1. search_law          — 법률 키워드 검색 (GII + Concept Map)
  *  2. get_law_section     — 특정 조문 전문 조회
@@ -53,6 +53,8 @@
  * 35. search_bmf_schreiben  — BMF-Schreiben 검색 (등급 A, 1차 행정해석)
  * 36. get_bmf_schreiben     — BMF-Schreiben 전문 조회 (URL 또는 AZ)
  * 37. verify_bmf_citation   — BMF 인용 검증 (환각 방지)
+ * ── Cross-jurisdiction 계약 검토 ─────────────────────
+ * 38. review_nda            — DE/EU/KR NDA triage + dispatcher payload
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -120,7 +122,7 @@ export const server = new McpServer({
   name: "german-law-mcp",
   version: "0.7.0",
   description:
-    "German law MCP server — 37 tools covering federal legislation, court decisions, " +
+    "German law MCP server — 38 tools covering federal legislation, court decisions, " +
     "fee calculation, deadline computation, citation verification, amendment history, " +
     "legal analysis, German-EU law comparison (EUR-Lex live), delegation chain tracing, " +
     "source grading, cross-reference extraction, 14-gate quality validation, " +

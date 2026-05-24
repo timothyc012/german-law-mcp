@@ -22,7 +22,7 @@ import {
 } from "../lib/rulebooks/types.js";
 
 export const reviewNdaSchema = z.object({
-  text: z.string().min(20).describe("NDA-Volltext zur Prüfung"),
+  text: z.string().min(20).max(120_000).describe("NDA-Volltext zur Prüfung"),
   role: z
     .enum(["disclosing", "receiving", "mutual"])
     .default("receiving")

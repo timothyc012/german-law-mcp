@@ -2,7 +2,7 @@
   "mcpServers": {
     "korean-law": {
       "command": "npx",
-      "args": ["-y", "korean-law-mcp"]
+      "args": ["-y", "korean-law-mcp@3.5.4"]
     }
   }
 }

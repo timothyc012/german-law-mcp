@@ -8,8 +8,10 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { readFileSync } from "node:fs";
 
-const EXPECTED_TOOL_COUNT = 34;
+const indexTs = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+const EXPECTED_TOOL_COUNT = new Set([...indexTs.matchAll(/server\.registerTool\(\s*"([a-z0-9_]+)"/g)].map((m) => m[1])).size;
 
 async function main() {
   const transport = new StdioClientTransport({
@@ -33,7 +35,19 @@ async function main() {
       throw new Error(`Expected ${EXPECTED_TOOL_COUNT} tools, got ${tools.length}`);
     }
 
-    for (const required of ["search_law", "get_law_section", "lookup_legal_term", "risk_alert", "review_contract_clauses", "chain_full_research", "source_health_check"]) {
+    for (const required of [
+      "search_law",
+      "get_law_section",
+      "lookup_legal_term",
+      "risk_alert",
+      "review_contract_clauses",
+      "review_nda",
+      "chain_full_research",
+      "source_health_check",
+      "search_bmf_schreiben",
+      "get_bmf_schreiben",
+      "verify_bmf_citation",
+    ]) {
       if (!toolNames.has(required)) {
         throw new Error(`Required tool missing from MCP listTools: ${required}`);
       }
