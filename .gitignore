@@ -4,6 +4,8 @@ dist/
 .DS_Store
 .omc/
 .memdb/
+.agents/
+.codex/
 
 # Personal / multi-project notes — not part of this repo
 AGENTS.md
