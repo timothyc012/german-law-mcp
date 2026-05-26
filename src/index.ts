@@ -6,7 +6,7 @@
  * 독일 연방법률 검색 및 조회를 위한 MCP 서버.
  * NeuRIS API + Gesetze im Internet을 데이터 소스로 사용한다.
  *
- * 도구 목록 (38개):
+ * 도구 목록 (39개):
  * ── 기본 검색 ──────────────────────────────────────────
  *  1. search_law          — 법률 키워드 검색 (GII + Concept Map)
  *  2. get_law_section     — 특정 조문 전문 조회
@@ -55,6 +55,7 @@
  * 37. verify_bmf_citation   — BMF 인용 검증 (환각 방지)
  * ── Cross-jurisdiction 계약 검토 ─────────────────────
  * 38. review_nda            — DE/EU/KR NDA triage + dispatcher payload
+ * 39. review_contract       — contract classifier + dispatcher (NDA active, v2 routes planned)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -110,6 +111,7 @@ import { lookupLegalTermSchema, lookupLegalTerm } from "./tools/lookup-legal-ter
 import { riskAlertSchema, riskAlert } from "./tools/risk-alert.js";
 import { reviewContractClausesSchema, reviewContractClauses } from "./tools/review-contract-clauses.js";
 import { reviewNdaSchema, reviewNda } from "./tools/review-nda.js";
+import { reviewContractSchema, reviewContract } from "./tools/review-contract.js";
 import { chainFullResearchSchema, chainFullResearch } from "./tools/chain-full-research.js";
 import { sourceHealthCheckSchema, sourceHealthCheck } from "./tools/source-health-check.js";
 
@@ -122,7 +124,7 @@ export const server = new McpServer({
   name: "german-law-mcp",
   version: "0.7.0",
   description:
-    "German law MCP server — 38 tools covering federal legislation, court decisions, " +
+    "German law MCP server — 39 tools covering federal legislation, court decisions, " +
     "fee calculation, deadline computation, citation verification, amendment history, " +
     "legal analysis, German-EU law comparison (EUR-Lex live), delegation chain tracing, " +
     "source grading, cross-reference extraction, 14-gate quality validation, " +
@@ -675,6 +677,22 @@ server.registerTool(
   async (params) => {
     const input = reviewNdaSchema.parse(params);
     const result = await reviewNda(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_contract",
+  {
+    description:
+      "Cross-jurisdiction contract review dispatcher. Classifies contract type, executes active specialist routes " +
+      "(currently NDA → review_nda), and discloses planned v2 routes for DPA, Service, License, EULA, Employment, " +
+      "Lease, M&A, and General fallback without pretending inactive specialist tools exist.",
+    inputSchema: reviewContractSchema.shape,
+  },
+  async (params) => {
+    const input = reviewContractSchema.parse(params);
+    const result = await reviewContract(input);
     return { content: [{ type: "text", text: result }] };
   },
 );

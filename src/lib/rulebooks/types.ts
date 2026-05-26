@@ -13,6 +13,7 @@
 export type Jurisdiction = "DE" | "EU" | "KR";
 export type Role = "disclosing" | "receiving" | "mutual";
 export type RiskLevel = "hoch" | "mittel" | "niedrig";
+export type ContractType = "NDA" | "DPA" | "Service" | "License" | "Employment" | "Lease" | "EULA" | "MA" | "General";
 
 export interface BilingualText {
   de?: string;
@@ -52,7 +53,7 @@ export interface ChecklistItem {
 }
 
 export interface ContractRulebook {
-  contractType: "NDA" | "DPA" | "Service" | "License" | "Employment" | "Lease" | "EULA" | "MA" | "General";
+  contractType: ContractType;
   version: string;
   items: ChecklistItem[];
 }

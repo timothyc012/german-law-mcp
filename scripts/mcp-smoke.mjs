@@ -42,6 +42,7 @@ async function main() {
       "risk_alert",
       "review_contract_clauses",
       "review_nda",
+      "review_contract",
       "chain_full_research",
       "source_health_check",
       "search_bmf_schreiben",
