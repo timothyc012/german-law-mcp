@@ -1,0 +1,15 @@
+[mcp_servers.german-law]
+command = "node"
+args = ["__GERMAN_LAW_MCP__/dist/index.js"]
+
+[mcp_servers.steuer]
+command = "uv"
+args = ["--directory", "__STEUER_MCP__", "run", "steuer-mcp"]
+
+[mcp_servers.korean-law]
+command = "npx"
+args = ["-y", "korean-law-mcp@latest"]
+
+[mcp_servers.korean-law.env]
+LAW_OC = "__LAW_OC_OPTIONAL__"
+
