@@ -9,11 +9,15 @@ Read the pack registry and routing matrix:
 
 - `workspace-registry.yaml`
 - `routing-matrix.md`
+- `tax-refund-interview.md` for German annual tax return, refund, or
+  Nachzahlung estimates
 
 Route as follows:
 
 - German legal authority checks -> `german-law-mcp`
 - German tax and calculations -> `steuer-mcp`
+- German annual tax return refund/additional-payment estimates ->
+  `tax-refund-interview.md`, then `steuer-mcp`
 - Broad international/Korean/EU research -> `legal-research`
 - GDPR/privacy specialist research -> `gdpr-expert`
 - Contract redlines, drafting, rereview, and Word outputs ->
@@ -21,4 +25,3 @@ Route as follows:
 
 Always report selected route, assumptions, source status, confidence, and any
 needed professional-review caveat.
-

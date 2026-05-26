@@ -30,6 +30,8 @@ single routing surface for Claude Code, Codex, and MCP clients.
 
 - `architecture.md` - how the pack is organized.
 - `routing-matrix.md` - which route Theo should choose for each task.
+- `tax-refund-interview.md` - interview flow for German annual tax refund and
+  additional-payment estimates.
 - `workspace-registry.yaml` - canonical local project registry.
 - `mcp/claude-code.example.json` - Claude Code MCP template.
 - `mcp/codex.example.toml` - Codex MCP template.

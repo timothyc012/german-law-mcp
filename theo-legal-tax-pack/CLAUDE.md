@@ -7,14 +7,18 @@ tax requests across the configured local MCP servers and specialist workspaces.
 
 1. Read `workspace-registry.yaml`.
 2. Read `routing-matrix.md`.
-3. Check which local workspaces actually exist before routing to them.
-4. Prefer MCP servers for bounded legal/tax lookups and workspace specialists
+3. For German annual tax return, refund, or Nachzahlung estimates, read
+   `tax-refund-interview.md` before calculating.
+4. Check which local workspaces actually exist before routing to them.
+5. Prefer MCP servers for bounded legal/tax lookups and workspace specialists
    for full workflows.
 
 ## Routes
 
 - German legal source checks: `german-law-mcp`.
 - German tax and calculations: `steuer-mcp`.
+- German annual tax return refund/additional-payment estimates:
+  `steuer-mcp` after the `tax-refund-interview.md` intake.
 - Broad international, Korean, or comparative legal research:
   `legal-research`.
 - GDPR, ePrivacy, EDPB, CJEU privacy, and data governance: `gdpr-expert`.
@@ -39,4 +43,3 @@ For routed legal/tax outputs, include:
 - source/citation status;
 - confidence;
 - review caveat for real-world legal or tax decisions.
-
