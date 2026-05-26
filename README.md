@@ -6,6 +6,16 @@
 독일 연방법률 검색·분석을 위한 **Model Context Protocol (MCP) 서버**.  
 47개 도구로 법령 조문, 법률 목차, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교·EUR-Lex 직접 조회, 위임체계 추적, 조문 비교, 계약/AGB 리스크 스크리닝, NDA/DPA/용역/라이선스/EULA/고용/임대차/M&A/일반계약 triage, 계약유형 분류·디스패치, 종합 리서치 체인, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전, 리스크 조기 경고, 소스 상태 점검, BMF-Schreiben(연방재무부 행정해석)까지 커버합니다.
 
+## Theo Legal/Tax Pack 배포
+
+이 저장소는 독일법 MCP 개발 repo입니다. Claude/Codex에서 Theo, 독일법,
+독일 세무, GDPR, 계약 검토 워크플로우를 한 번에 설치·공유하기 위한 배포
+패키지는 별도 clean repo인 `theo-legal-tax-pack`에서 관리합니다.
+
+이 저장소에는 배포 pack 사본을 vendoring하지 않습니다. 패키지 공유, 설치
+스크립트, 사용 예시, 민감정보 스캔, archive 생성은 `theo-legal-tax-pack`을
+기준으로 진행하세요.
+
 ## 데이터 소스
 
 | 소스 | 내용 | 무료 |
