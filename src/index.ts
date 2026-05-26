@@ -6,7 +6,7 @@
  * 독일 연방법률 검색 및 조회를 위한 MCP 서버.
  * NeuRIS API + Gesetze im Internet을 데이터 소스로 사용한다.
  *
- * 도구 목록 (39개):
+ * 도구 목록 (47개):
  * ── 기본 검색 ──────────────────────────────────────────
  *  1. search_law          — 법률 키워드 검색 (GII + Concept Map)
  *  2. get_law_section     — 특정 조문 전문 조회
@@ -56,6 +56,14 @@
  * ── Cross-jurisdiction 계약 검토 ─────────────────────
  * 38. review_nda            — DE/EU/KR NDA triage + dispatcher payload
  * 39. review_contract       — contract classifier + dispatcher (NDA active, v2 routes planned)
+ * 40. review_dpa            — GDPR/PIPA data processing agreement triage
+ * 41. review_services       — service/work-contract triage
+ * 42. review_license        — IP/license agreement triage
+ * 43. review_eula           — software EULA triage
+ * 44. review_employment     — employment agreement triage
+ * 45. review_lease          — lease agreement triage
+ * 46. review_ma             — M&A agreement triage
+ * 47. review_general        — catch-all contract triage
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -112,6 +120,14 @@ import { riskAlertSchema, riskAlert } from "./tools/risk-alert.js";
 import { reviewContractClausesSchema, reviewContractClauses } from "./tools/review-contract-clauses.js";
 import { reviewNdaSchema, reviewNda } from "./tools/review-nda.js";
 import { reviewContractSchema, reviewContract } from "./tools/review-contract.js";
+import { reviewDpaSchema, reviewDpa } from "./tools/review-dpa.js";
+import { reviewServicesSchema, reviewServices } from "./tools/review-services.js";
+import { reviewLicenseSchema, reviewLicense } from "./tools/review-license.js";
+import { reviewEulaSchema, reviewEula } from "./tools/review-eula.js";
+import { reviewEmploymentSchema, reviewEmployment } from "./tools/review-employment.js";
+import { reviewLeaseSchema, reviewLease } from "./tools/review-lease.js";
+import { reviewMaSchema, reviewMa } from "./tools/review-ma.js";
+import { reviewGeneralSchema, reviewGeneral } from "./tools/review-general.js";
 import { chainFullResearchSchema, chainFullResearch } from "./tools/chain-full-research.js";
 import { sourceHealthCheckSchema, sourceHealthCheck } from "./tools/source-health-check.js";
 
@@ -124,7 +140,7 @@ export const server = new McpServer({
   name: "german-law-mcp",
   version: "0.7.0",
   description:
-    "German law MCP server — 39 tools covering federal legislation, court decisions, " +
+    "German law MCP server — 47 tools covering federal legislation, court decisions, " +
     "fee calculation, deadline computation, citation verification, amendment history, " +
     "legal analysis, German-EU law comparison (EUR-Lex live), delegation chain tracing, " +
     "source grading, cross-reference extraction, 14-gate quality validation, " +
@@ -686,13 +702,125 @@ server.registerTool(
   {
     description:
       "Cross-jurisdiction contract review dispatcher. Classifies contract type, executes active specialist routes " +
-      "(currently NDA → review_nda), and discloses planned v2 routes for DPA, Service, License, EULA, Employment, " +
-      "Lease, M&A, and General fallback without pretending inactive specialist tools exist.",
+      "for NDA, DPA, Service, License, EULA, Employment, Lease, M&A, and General fallback.",
     inputSchema: reviewContractSchema.shape,
   },
   async (params) => {
     const input = reviewContractSchema.parse(params);
     const result = await reviewContract(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_dpa",
+  {
+    description:
+      "DPA-Triage über DE / EU / KR Rechtsordnungen. Prüft Rollen, Weisungen, Subprocessor, TOMs, Assistance/Audit, " +
+      "Rückgabe/Löschung gegen GDPR Art. 28/32 und koreanische PIPA outsourcing anchors.",
+    inputSchema: reviewDpaSchema.shape,
+  },
+  async (params) => {
+    const input = reviewDpaSchema.parse(params);
+    const result = await reviewDpa(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_services",
+  {
+    description:
+      "Service-/Werkvertrag-Triage über DE / EU / KR. Prüft Vertragstypgrenze, Scope, Change Control, Abnahme/Zahlung, SLA, IP an Deliverables.",
+    inputSchema: reviewServicesSchema.shape,
+  },
+  async (params) => {
+    const input = reviewServicesSchema.parse(params);
+    const result = await reviewServices(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_license",
+  {
+    description:
+      "License agreement triage for IP/software/content licenses. Prüft Lizenzumfang, Sublicensing, Ownership, OSS, Royalty/Audit über DE/EU/KR anchors.",
+    inputSchema: reviewLicenseSchema.shape,
+  },
+  async (params) => {
+    const input = reviewLicenseSchema.parse(params);
+    const result = await reviewLicense(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_eula",
+  {
+    description:
+      "Software EULA triage. Prüft AGB/consumer control, license restrictions, unilateral changes, warranty/liability, telemetry/data issues.",
+    inputSchema: reviewEulaSchema.shape,
+  },
+  async (params) => {
+    const input = reviewEulaSchema.parse(params);
+    const result = await reviewEula(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_employment",
+  {
+    description:
+      "Employment agreement triage over DE/KR anchors. Prüft essential terms, probation/termination, working time/overtime, leave, non-compete/confidentiality.",
+    inputSchema: reviewEmploymentSchema.shape,
+  },
+  async (params) => {
+    const input = reviewEmploymentSchema.parse(params);
+    const result = await reviewEmployment(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_lease",
+  {
+    description:
+      "Lease agreement triage over DE/KR anchors. Prüft object/rent, deposit, repairs, term/termination, sublease/use restrictions.",
+    inputSchema: reviewLeaseSchema.shape,
+  },
+  async (params) => {
+    const input = reviewLeaseSchema.parse(params);
+    const result = await reviewLease(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_ma",
+  {
+    description:
+      "M&A agreement triage over DE/EU/KR anchors. Prüft transaction structure, CPs, reps/warranties, indemnity limits, merger-control/regulatory triggers.",
+    inputSchema: reviewMaSchema.shape,
+  },
+  async (params) => {
+    const input = reviewMaSchema.parse(params);
+    const result = await reviewMa(input);
+    return { content: [{ type: "text", text: result }] };
+  },
+);
+
+server.registerTool(
+  "review_general",
+  {
+    description:
+      "Catch-all contract triage for agreements not covered by a specialist rulebook. Prüft parties/authority, scope/price, term/termination, liability, law/forum.",
+    inputSchema: reviewGeneralSchema.shape,
+  },
+  async (params) => {
+    const input = reviewGeneralSchema.parse(params);
+    const result = await reviewGeneral(input);
     return { content: [{ type: "text", text: result }] };
   },
 );

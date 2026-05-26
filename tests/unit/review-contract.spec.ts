@@ -22,7 +22,7 @@ describe("review-contract dispatcher", () => {
     expect(output).toContain("Dispatcher-Payload");
   });
 
-  it("discloses planned DPA route without pretending review_dpa is active", async () => {
+  it("dispatches DPA input to the active review_dpa tool", async () => {
     const output = await reviewContract({
       text:
         "This Data Processing Agreement is entered into under Art. 28 GDPR. The controller appoints the processor for personal data processing and subprocessor support.",
@@ -34,12 +34,11 @@ describe("review-contract dispatcher", () => {
 
     expect(output).toContain("Detected contract type: DPA");
     expect(output).toContain("review_dpa");
-    expect(output).toContain("Status: PLANNED");
-    expect(output).toContain("Specialist MCP tool is not active yet");
-    expect(output).not.toContain("Active Specialist Execution");
+    expect(output).toContain("Active Specialist Execution: review_dpa");
+    expect(output).toContain("DPA-Review");
   });
 
-  it("uses German AGB quick-screen fallback for general contracts", async () => {
+  it("dispatches general contracts to the active general rulebook", async () => {
     const output = await reviewContract({
       text:
         "General Terms: The provider may change prices at any time without giving reasons. Termination must be made only by registered letter.",
@@ -51,13 +50,13 @@ describe("review-contract dispatcher", () => {
     });
 
     expect(output).toContain("Detected contract type: General");
-    expect(output).toContain("Limited Fallback: German AGB quick screen");
-    expect(output).toContain("AGB-Kontrolle");
+    expect(output).toContain("Active Specialist Execution: review_general");
+    expect(output).toContain("General-Review");
   });
 
-  it("keeps only NDA active while tracking v2 planned routes", () => {
-    expect(activeContractRoutes().map((route) => route.toolName)).toEqual(["review_nda"]);
-    expect(plannedContractRoutes().map((route) => route.toolName)).toEqual([
+  it("activates every phase 2-6 contract route", () => {
+    expect(activeContractRoutes().map((route) => route.toolName)).toEqual([
+      "review_nda",
       "review_dpa",
       "review_services",
       "review_license",
@@ -67,6 +66,7 @@ describe("review-contract dispatcher", () => {
       "review_ma",
       "review_general",
     ]);
+    expect(plannedContractRoutes()).toEqual([]);
   });
 
   it("keeps classifier output deterministic for service contracts", () => {

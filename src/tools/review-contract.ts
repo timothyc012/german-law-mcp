@@ -11,12 +11,19 @@ import {
   CONTRACT_ROUTES,
   activeContractRoutes,
   classifyContract,
-  plannedContractRoutes,
   routeForContractType,
 } from "../lib/contract-registry.js";
 import type { ContractType } from "../lib/rulebooks/types.js";
 import { reviewContractClauses } from "./review-contract-clauses.js";
+import { reviewDpa } from "./review-dpa.js";
+import { reviewEmployment } from "./review-employment.js";
+import { reviewEula } from "./review-eula.js";
+import { reviewGeneral } from "./review-general.js";
+import { reviewLease } from "./review-lease.js";
+import { reviewLicense } from "./review-license.js";
+import { reviewMa } from "./review-ma.js";
 import { reviewNda } from "./review-nda.js";
+import { reviewServices } from "./review-services.js";
 
 const contractTypeValues = ["NDA", "DPA", "Service", "License", "Employment", "Lease", "EULA", "MA", "General"] as const;
 
@@ -54,11 +61,6 @@ function declaredType(value: z.output<typeof reviewContractSchema>["contract_typ
 function renderRouteTable(): string[] {
   const lines = ["── Contract Review Route Registry ──"];
   lines.push(`Active: ${activeContractRoutes().map((route) => `${route.contractType} → ${route.toolName}`).join(", ")}`);
-  lines.push(
-    `Planned: ${plannedContractRoutes()
-      .map((route) => `${route.contractType} → ${route.toolName} (${route.phase})`)
-      .join(", ")}`,
-  );
   return lines;
 }
 
@@ -79,6 +81,39 @@ function renderPlannedRoute(route: ReturnType<typeof routeForContractType>, inpu
   return lines;
 }
 
+async function executeActiveRoute(
+  contractType: ContractType,
+  input: z.output<typeof reviewContractSchema>,
+): Promise<string> {
+  const reviewInput = {
+    text: input.text,
+    role: input.role,
+    jurisdictions: input.jurisdictions,
+    language: input.language,
+  };
+
+  switch (contractType) {
+    case "NDA":
+      return reviewNda(reviewInput);
+    case "DPA":
+      return reviewDpa(reviewInput);
+    case "Service":
+      return reviewServices(reviewInput);
+    case "License":
+      return reviewLicense(reviewInput);
+    case "EULA":
+      return reviewEula(reviewInput);
+    case "Employment":
+      return reviewEmployment(reviewInput);
+    case "Lease":
+      return reviewLease(reviewInput);
+    case "MA":
+      return reviewMa(reviewInput);
+    case "General":
+      return reviewGeneral(reviewInput);
+  }
+}
+
 export async function reviewContract(rawInput: ReviewContractInput): Promise<string> {
   try {
     const input = reviewContractSchema.parse(rawInput);
@@ -96,17 +131,10 @@ export async function reviewContract(rawInput: ReviewContractInput): Promise<str
       "",
     ];
 
-    if (route.contractType === "NDA" && route.status === "active") {
-      lines.push("── Active Specialist Execution: review_nda ──");
+    if (route.status === "active") {
+      lines.push(`── Active Specialist Execution: ${route.toolName} ──`);
       lines.push("");
-      lines.push(
-        await reviewNda({
-          text: input.text,
-          role: input.role,
-          jurisdictions: input.jurisdictions,
-          language: input.language,
-        }),
-      );
+      lines.push(await executeActiveRoute(route.contractType, input));
       return lines.join("\n");
     }
 
@@ -132,7 +160,7 @@ export async function reviewContract(rawInput: ReviewContractInput): Promise<str
           classification,
           selectedRoute: route,
           activeRoutes: activeContractRoutes().map((activeRoute) => activeRoute.toolName),
-          plannedRoutes: plannedContractRoutes().map((plannedRoute) => plannedRoute.toolName),
+          plannedRoutes: CONTRACT_ROUTES.filter((registeredRoute) => registeredRoute.status === "planned").map((plannedRoute) => plannedRoute.toolName),
           allRoutes: CONTRACT_ROUTES.map((registeredRoute) => ({
             contractType: registeredRoute.contractType,
             toolName: registeredRoute.toolName,
