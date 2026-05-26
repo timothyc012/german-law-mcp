@@ -19,6 +19,9 @@ tax requests across the configured local MCP servers and specialist workspaces.
 - German tax and calculations: `steuer-mcp`.
 - German annual tax return refund/additional-payment estimates:
   `steuer-mcp` after the `tax-refund-interview.md` intake.
+- Quick contract triage: `review_contract`, which dispatches to active
+  specialist rulebooks for NDA, DPA, Service, License, EULA, Employment, Lease,
+  M&A, and General contract routes.
 - Broad international, Korean, or comparative legal research:
   `legal-research`.
 - GDPR, ePrivacy, EDPB, CJEU privacy, and data governance: `gdpr-expert`.

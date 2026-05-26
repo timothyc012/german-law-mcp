@@ -18,6 +18,8 @@ Route as follows:
 - German tax and calculations -> `steuer-mcp`
 - German annual tax return refund/additional-payment estimates ->
   `tax-refund-interview.md`, then `steuer-mcp`
+- Quick contract triage -> `review_contract`, then the matching active
+  specialist rulebook
 - Broad international/Korean/EU research -> `legal-research`
 - GDPR/privacy specialist research -> `gdpr-expert`
 - Contract redlines, drafting, rereview, and Word outputs ->

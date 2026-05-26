@@ -10,10 +10,11 @@ for legal/tax analysis through the pack.
 | German annual tax return estimate, refund estimate, Nachzahlung estimate, "연말정산 예상 환급액" | `steuer-mcp` + `tax-refund-interview.md` | Interview for missing inputs before calculating; do not ask for tax ID, bank account, or exact address. |
 | Broad legal research, multi-jurisdiction comparison, KR/EU/global source collection | `legal-research` | Good default when facts are unclear or the task needs a full research memo. |
 | GDPR, ePrivacy, EDPB, CJEU privacy case law, data governance, AI/data regulation overlap | `gdpr-expert` | Use `legal-research` for non-EU comparative expansion. |
+| Quick contract triage by type | `review_contract` | Active specialist routes: `review_nda`, `review_dpa`, `review_services`, `review_license`, `review_eula`, `review_employment`, `review_lease`, `review_ma`, `review_general`. |
 | Contract review, redlines, clause comments, negotiation memo, draft/rereview/export-clean workflow | `contract-review` | For quick German AGB risk screening, `german-law-mcp` may be enough. |
 | Cross-border contract with German tax implications | `contract-review` + `steuer-mcp` + `german-law-mcp` | Start with document workflow, then call tools for law/tax checks. |
 | German + Korean legal issue | `legal-research` + `german-law-mcp` + Korean law MCP if configured | Require source-grade labels and jurisdiction-specific caveats. |
-| Privacy clause in a contract | `contract-review` + `gdpr-expert` | Keep drafting/redline state in `contract-review`; privacy authority in `gdpr-expert`. |
+| Privacy clause in a contract | `review_contract` + `review_dpa` + `gdpr-expert` | Keep drafting/redline state in `contract-review` when Word outputs are needed; privacy authority in `gdpr-expert`. |
 
 ## Output Contract
 

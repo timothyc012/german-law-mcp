@@ -24,6 +24,8 @@ This skill is a routing surface for the local Theo Legal/Tax Pack.
 - German tax calculations and tax utilities: use `steuer-mcp`.
 - German annual tax return refund/additional-payment estimates: interview for
   missing inputs, then use `steuer-mcp`.
+- Quick contract triage: use `review_contract`, which dispatches to active NDA,
+  DPA, Service, License, EULA, Employment, Lease, M&A, and General rulebooks.
 - Broad international/Korean/EU research: use `legal-research`.
 - GDPR/privacy specialist research: use `gdpr-expert`.
 - Contract redlines, drafting, rereview, and Word outputs: use

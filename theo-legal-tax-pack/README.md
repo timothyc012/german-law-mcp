@@ -15,10 +15,13 @@ single routing surface for Claude Code, Codex, and MCP clients.
 | `legal-research` | General international/KR/EU legal research workflow | Workspace specialist |
 | `gdpr-expert` | EU privacy, GDPR, EDPB, CJEU structured RAG | Workspace specialist |
 | `contract-review` | Contract review, DOCX redlines, drafting, rereview | Workspace specialist |
+| `review_contract` | Active MCP dispatcher for NDA, DPA, Service, License, EULA, Employment, Lease, M&A, and General contract triage | MCP tool |
 
 ## Why This Is a Pack, Not a Source Merge
 
 - `german-law-mcp` and `steuer-mcp` are runtime tools.
+- `review_contract` and its specialist rulebooks are active runtime triage
+  tools for quick issue spotting before deeper document workflows.
 - `legal-research`, `gdpr-expert`, and `contract-review` contain large local
   libraries and workflow state.
 - Copying those projects into one repo would increase sharing risk and make
