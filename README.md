@@ -173,6 +173,13 @@ npm run verify:live-law     # GII 실시간 조회 기반 하드코딩 조문 sp
   }
 }
 ```
+### Codex (`~/.codex/config.toml`)
+
+```toml
+[mcp_servers.german-law]
+command = "node"
+args = ["/absolute/path/to/german-law-mcp/dist/index.js"]
+```
 
 ### Hermes Agent (`~/.hermes/config.yaml`)
 
@@ -203,7 +210,7 @@ mcp:
 
 ### 조문 조회
 ```
-get_law_section({ gesetz: "BGB", paragraph: "437" })
+get_law_section({ law: "BGB", section: "437" })
 → § 437 BGB 전문 (구매물 하자에 관한 권리)
 ```
 

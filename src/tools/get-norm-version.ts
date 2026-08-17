@@ -252,13 +252,9 @@ export async function getNormVersion(input: GetNormVersionInput): Promise<string
 
   // 1. Aktuellen Text holen
   lines.push("\n  [1/3] Aktueller Text (gesetze-im-internet.de)...");
-  let aktuellerText: string | null = null;
-  try {
-    const section = await getLawSection(gesetz, paragraph);
-    aktuellerText = section.content;
-  } catch {
-    aktuellerText = null;
-  }
+  const aktuellerText = await getLawSection(gesetz, paragraph)
+    .then((section) => section.content)
+    .catch(() => null);
 
   if (aktuellerText) {
     lines.push("\n  ── AKTUELLER TEXT (heute) ──────────────────────────");

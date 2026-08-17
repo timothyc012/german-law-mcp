@@ -96,6 +96,12 @@ if (!readme.includes("`risk_alert`")) {
   fail("README does not document risk_alert.");
 }
 
+if (!readme.includes('get_law_section({ law: "BGB", section: "437" })')) {
+  fail("README get_law_section example must use the registered law/section schema.");
+} else {
+  pass("README get_law_section example matches the registered schema.");
+}
+
 const scripts = packageJson.scripts ?? {};
 for (const scriptName of ["typecheck", "verify:regression", "verify:docs", "verify:live-law", "verify"]) {
   if (!(scriptName in scripts)) {
