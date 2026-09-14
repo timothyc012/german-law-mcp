@@ -4,9 +4,12 @@ dist/
 .DS_Store
 .omc/
 .memdb/
+.agents/
+.codex/
 
 # Personal / multi-project notes — not part of this repo
 AGENTS.md
 AI_RS_Berater.md
 german-law-mcp-plan.md
 .scorecard-manual.json
+.omx/

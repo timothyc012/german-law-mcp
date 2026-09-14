@@ -32,7 +32,7 @@ export async function extractCrossRefs(input: ExtractCrossRefsInput): Promise<st
 
   // ── 조문 조회 ─────────────────────────────────────────────────────────────
   let sectionContent: string;
-  let builtinRefs: Array<{ law: string; section: string; display: string }> = [];
+  let builtinRefs: Array<{ law: string; section: string; display: string }>;
 
   try {
     const result = await getLawSectionLib(law, section);

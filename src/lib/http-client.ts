@@ -67,7 +67,8 @@ export async function fetchWithRetry(
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (init.signal?.aborted) {
-      throw new Error(describeFailure(options.source, abortError()));
+      const error = abortError();
+      throw new Error(describeFailure(options.source, error), { cause: error });
     }
 
     try {
@@ -83,16 +84,16 @@ export async function fetchWithRetry(
     } catch (error) {
       lastError = error;
       if (isAbortLikeError(error) || attempt === retries) {
-        throw new Error(describeFailure(options.source, error));
+        throw new Error(describeFailure(options.source, error), { cause: error });
       }
     }
 
     try {
       await sleep(backoffMs * 2 ** attempt, init.signal);
     } catch (error) {
-      throw new Error(describeFailure(options.source, error));
+      throw new Error(describeFailure(options.source, error), { cause: error });
     }
   }
 
-  throw new Error(describeFailure(options.source, lastError));
+  throw new Error(describeFailure(options.source, lastError), { cause: lastError });
 }

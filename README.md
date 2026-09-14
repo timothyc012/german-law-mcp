@@ -4,7 +4,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 독일 연방법률 검색·분석을 위한 **Model Context Protocol (MCP) 서버**.  
-37개 도구로 법령 조문, 법률 목차, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교·EUR-Lex 직접 조회, 위임체계 추적, 조문 비교, 계약/AGB 리스크 스크리닝, 종합 리서치 체인, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전, 리스크 조기 경고, 소스 상태 점검, BMF-Schreiben(연방재무부 행정해석)까지 커버합니다.
+47개 도구로 법령 조문, 법률 목차, 판례, 변호사 수임료, 기한 계산, 법적 감정서, 독일-EU법 비교·EUR-Lex 직접 조회, 위임체계 추적, 조문 비교, 계약/AGB 리스크 스크리닝, NDA/DPA/용역/라이선스/EULA/고용/임대차/M&A/일반계약 triage, 계약유형 분류·디스패치, 종합 리서치 체인, 교차참조 추출, 품질 검증, 주법(Landesrecht), 개정 이력, 법률 용어 사전, 리스크 조기 경고, 소스 상태 점검, BMF-Schreiben(연방재무부 행정해석)까지 커버합니다.
+
+## Theo Legal/Tax Pack 배포
+
+이 저장소는 독일법 MCP 개발 repo입니다. Claude/Codex에서 Theo, 독일법,
+독일 세무, GDPR, 계약 검토 워크플로우를 한 번에 설치·공유하기 위한 배포
+패키지는 별도 clean repo인 `theo-legal-tax-pack`에서 관리합니다.
+
+이 저장소에는 배포 pack 사본을 vendoring하지 않습니다. 패키지 공유, 설치
+스크립트, 사용 예시, 민감정보 스캔, archive 생성은 `theo-legal-tax-pack`을
+기준으로 진행하세요.
 
 ## 데이터 소스
 
@@ -16,7 +26,7 @@
 | [EUR-Lex CELLAR](https://publications.europa.eu/webapi/rdf/sparql) | EU 법령 실시간 메타데이터 (SPARQL API) | ✅ |
 | Wayback Machine | 법령 역사적 버전 조회 | ✅ |
 
-## 도구 목록 (37개)
+## 도구 목록 (47개)
 
 ### 기본 검색 (6개)
 
@@ -88,12 +98,22 @@
 |------|------|
 | `lookup_legal_term` | 독일 법률 용어 사전 — 40개 이상 용어, 한국어·영어 설명, 관련 조문, 퍼지 검색 |
 
-### 리스크 / 계약 검토 (2개) — Phase 7
+### 리스크 / 계약 검토 (12개) — Phase 7
 
 | 도구 | 설명 |
 |------|------|
 | `risk_alert` | 사실관계 기반 리스크 조기 경고 — Verjährung 카운트다운, Frist 경고, 비용·관할 리스크 점검 |
 | `review_contract_clauses` | BGB §§ 307-309 기준 계약·AGB 불공정 조항 리스크 스크리닝 |
+| `review_nda` | DE/EU/KR NDA triage — 11개 표준 항목, receiving-side 가중치, cross-border dispatcher JSON 출력 |
+| `review_contract` | 계약유형 classifier + dispatcher — NDA/DPA/Service/License/EULA/Employment/Lease/M&A/General specialist route 실행 |
+| `review_dpa` | GDPR Art. 28/32 및 개인정보보호법 위탁처리 anchor 기반 DPA triage |
+| `review_services` | BGB Dienst-/Werkvertrag, 한국 민법 도급/위임 anchor 기반 용역계약 triage |
+| `review_license` | UrhG/저작권법, 재라이선스, OSS, 로열티·감사 중심 라이선스계약 triage |
+| `review_eula` | 소프트웨어 EULA — AGB/consumer control, 사용제한, 책임, telemetry/data triage |
+| `review_employment` | 고용계약 — 근로조건, 해지, 근로시간, 휴가, 경업금지 triage |
+| `review_lease` | 임대차 — 목적물/차임, 보증금, 수선, 기간·해지, 전대 triage |
+| `review_ma` | M&A — 거래구조, 선행조건, 진술보장, 면책, 기업결합/규제 trigger triage |
+| `review_general` | specialist rulebook fallback — 당사자, 급부·대금, 기간·해지, 책임, 준거법/관할 triage |
 
 ### 체인 워크플로우 (1개)
 
@@ -153,6 +173,13 @@ npm run verify:live-law     # GII 실시간 조회 기반 하드코딩 조문 sp
   }
 }
 ```
+### Codex (`~/.codex/config.toml`)
+
+```toml
+[mcp_servers.german-law]
+command = "node"
+args = ["/absolute/path/to/german-law-mcp/dist/index.js"]
+```
 
 ### Hermes Agent (`~/.hermes/config.yaml`)
 
@@ -183,7 +210,7 @@ mcp:
 
 ### 조문 조회
 ```
-get_law_section({ gesetz: "BGB", paragraph: "437" })
+get_law_section({ law: "BGB", section: "437" })
 → § 437 BGB 전문 (구매물 하자에 관한 권리)
 ```
 
@@ -234,7 +261,7 @@ risk_alert({
 
 ```
 src/
-├── index.ts              # MCP 서버 진입점 (도구 37개 등록)
+├── index.ts              # MCP 서버 진입점 (도구 47개 등록)
 ├── lib/
 │   ├── neuris-client.ts      # NeuRIS API 클라이언트
 │   ├── gii-client.ts         # gesetze-im-internet.de 클라이언트
@@ -246,7 +273,7 @@ src/
 │   ├── cache.ts              # 응답 캐싱 (TTL 기반)
 │   ├── court-map.ts          # 법원 코드 매핑
 │   └── law-abbreviations.ts  # 법령 약어 데이터베이스 (50+)
-└── tools/                # 도구별 구현 (37개)
+└── tools/                # 도구별 구현 (47개)
     ├── search-law.ts
     ├── get-law-section.ts
     ├── search-case-law.ts

@@ -114,7 +114,7 @@ async function fetchOpenjurPage(url: string, init: RequestInit): Promise<string>
       },
     }, { timeoutMs: 15_000, source: "openjur.de" });
   } catch (err) {
-    throw new Error(`openjur.de nicht erreichbar: ${(err as Error).message}`);
+    throw new Error(`openjur.de nicht erreichbar: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
   }
 
   if (!response.ok) {
