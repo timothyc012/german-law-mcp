@@ -26,6 +26,23 @@
 | [EUR-Lex CELLAR](https://publications.europa.eu/webapi/rdf/sparql) | EU 법령 실시간 메타데이터 (SPARQL API) | ✅ |
 | Wayback Machine | 법령 역사적 버전 조회 | ✅ |
 
+## 소스 무결성 계약
+
+법률 도구의 검색 결과는 단순 URL 목록이 아니라 검토 가능한 출처 메타데이터를
+가져야 합니다. `source-grade`는 URL의 문자열을 부분 검색하지 않고 실제
+hostname을 파싱하여 정확한 신뢰 도메인 또는 그 하위 도메인만 등급화합니다.
+
+각 등급 결과에는 다음 필드가 포함됩니다.
+
+- `grade`: A(1차 법령/판례), B(공식기관), C(공신력 있는 2차 자료), D(미검증)
+- `matchedDomain`: 실제로 일치한 신뢰 도메인
+- `isPrimary`: 1차 권위 출처 여부
+- `verifiedAt`: 이 등급 판정이 수행된 시각(ISO 8601)
+
+D등급 또는 잘못된 URL은 자동으로 권위 출처로 승격되지 않습니다. 결과를
+전문가 검토나 01ontology evidence pipeline에 넘길 때 이 메타데이터를 함께
+보존하세요.
+
 ## 도구 목록 (47개)
 
 ### 기본 검색 (6개)
