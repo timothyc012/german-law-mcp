@@ -18,6 +18,10 @@ export interface GradedSource {
   grade: SourceGrade;
   gradeReason: string;
   verifiedAt: string;
+  /** The exact trusted suffix that matched the parsed hostname. */
+  matchedDomain?: string;
+  /** Whether the matched source is treated as a primary authority. */
+  isPrimary: boolean;
 }
 
 // ── 도메인 기반 등급 규칙 ──────────────────────────────────────────────────
@@ -72,58 +76,83 @@ const GRADE_C_DOMAINS: string[] = [
 
 // ── 등급 부여 함수 ─────────────────────────────────────────────────────────
 
-/**
- * URL을 분석해 소스 등급을 반환한다.
+function matchesTrustedHost(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
+}
+
+function findMatchedDomain(hostname: string, domains: string[]): string | undefined {
+  return domains.find((domain) => matchesTrustedHost(hostname, domain));
+}
+
+/** URL을 분석해 소스 등급을 반환한다.
+ *
+ * URL 문자열 포함 검색을 사용하면 `trusted.example.attacker.test` 같은
+ * hostname이 신뢰 도메인으로 오인될 수 있다. 반드시 URL의 hostname을
+ * 파싱한 뒤 정확한 도메인 또는 하위 도메인만 허용한다.
  */
 export function gradeSource(url: string, title?: string): GradedSource {
-  const lower = url.toLowerCase();
+  const verifiedAt = new Date().toISOString();
+  let hostname: string;
 
-  // Grade A 체크
-  for (const domain of GRADE_A_DOMAINS) {
-    if (lower.includes(domain)) {
-      return {
-        url,
-        title,
-        grade: "A",
-        gradeReason: `1차 법령 원문 출처 (${domain})`,
-        verifiedAt: new Date().toISOString(),
-      };
-    }
+  try {
+    hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return {
+      url,
+      title,
+      grade: "D",
+      gradeReason: "유효한 URL이 아니므로 출처를 검증할 수 없습니다.",
+      verifiedAt,
+      isPrimary: false,
+    };
   }
 
-  // Grade B 체크
-  for (const domain of GRADE_B_DOMAINS) {
-    if (lower.includes(domain)) {
-      return {
-        url,
-        title,
-        grade: "B",
-        gradeReason: `공식 정부/감독기관 출처 (${domain})`,
-        verifiedAt: new Date().toISOString(),
-      };
-    }
+  const primaryDomain = findMatchedDomain(hostname, GRADE_A_DOMAINS);
+  if (primaryDomain) {
+    return {
+      url,
+      title,
+      grade: "A",
+      gradeReason: `1차 법령 원문 출처 (${primaryDomain})`,
+      verifiedAt,
+      matchedDomain: primaryDomain,
+      isPrimary: true,
+    };
   }
 
-  // Grade C 체크
-  for (const domain of GRADE_C_DOMAINS) {
-    if (lower.includes(domain)) {
-      return {
-        url,
-        title,
-        grade: "C",
-        gradeReason: `공신력 있는 법학 출판사/미디어 (${domain})`,
-        verifiedAt: new Date().toISOString(),
-      };
-    }
+  const officialDomain = findMatchedDomain(hostname, GRADE_B_DOMAINS);
+  if (officialDomain) {
+    return {
+      url,
+      title,
+      grade: "B",
+      gradeReason: `공식 정부/감독기관 출처 (${officialDomain})`,
+      verifiedAt,
+      matchedDomain: officialDomain,
+      isPrimary: false,
+    };
   }
 
-  // Grade D — 미분류
+  const secondaryDomain = findMatchedDomain(hostname, GRADE_C_DOMAINS);
+  if (secondaryDomain) {
+    return {
+      url,
+      title,
+      grade: "C",
+      gradeReason: `공신력 있는 법학 출판사/미디어 (${secondaryDomain})`,
+      verifiedAt,
+      matchedDomain: secondaryDomain,
+      isPrimary: false,
+    };
+  }
+
   return {
     url,
     title,
     grade: "D",
     gradeReason: "미검증 출처 — 1차 원문으로 직접 확인 필요",
-    verifiedAt: new Date().toISOString(),
+    verifiedAt,
+    isPrimary: false,
   };
 }
 
