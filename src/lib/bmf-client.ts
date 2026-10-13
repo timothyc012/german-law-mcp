@@ -117,30 +117,39 @@ function stripHtml(html: string): string {
  *   - 첨부: <a href="...pdf">
  */
 function parseBmfDetail(html: string, url: string): Omit<BMFSchreiben, "fetchedAt"> {
-  // 제목 추출 — og:title 우선, 폴백 <h1>
+  // 제목 추출 — og:title 우선(엔티티 해제, 사이트명 꼬리 제거), 폴백 <h1>("Navigation" 같은 접근성 제목 제외)
   const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i);
-  const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-  const title = (ogTitleMatch?.[1] ?? (h1Match ? stripHtml(h1Match[1]) : "")).trim() || "Unbekannt";
+  const h1Candidates = [...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)]
+    .map((h) => stripHtml(h[1]).replace(/\s+/g, " ").trim())
+    .filter((t) => t && !/^(Navigation|Servicemenü|Hauptmenü)$/i.test(t));
+  const title =
+    (ogTitleMatch ? stripHtml(ogTitleMatch[1]).replace(/\s*-\s*Bundesfinanzministerium\s*-\s*\w+\s*$/i, "").trim() : "") ||
+    h1Candidates[0] ||
+    "Unbekannt";
 
-  // 본문 추출 — <article> 또는 main content div
+  // 본문 추출 — <article>, <main>, 그 다음 role="main" 영역(2026 사이트 구조: 스크립트가 섞인 본문 밖은 버린다)
   let bodyHtml = "";
   const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
-  if (articleMatch) {
-    bodyHtml = articleMatch[1];
-  } else {
-    const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
-    if (mainMatch) bodyHtml = mainMatch[1];
-  }
-  const body = bodyHtml ? stripHtml(bodyHtml) : stripHtml(html);
+  const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+  const roleMainMatch = html.match(/<div[^>]*role=["']main["'][^>]*>([\s\S]*?)(?=<footer\b|<div[^>]*id=["']Footer["']|<\/body>)/i);
+  if (articleMatch) bodyHtml = articleMatch[1];
+  else if (mainMatch) bodyHtml = mainMatch[1];
+  else if (roleMainMatch) bodyHtml = roleMainMatch[1];
+  let body = stripHtml((bodyHtml || html).replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, ""));
+  // role="main" 영역은 빵부스러기·메뉴로 시작하므로, 제목이 본문에 있으면 거기서부터 자른다.
+  const titleStart = title !== "Unbekannt" ? body.indexOf(title.slice(0, 40)) : -1;
+  if (titleStart > 0) body = body.slice(titleStart);
 
-  // AZ 추출 — "GZ: ..." 또는 "Aktenzeichen: ..." 패턴
+  // AZ 추출 — "GZ: ..." 또는 "Aktenzeichen: ..." 패턴. 2026 사이트는 AZ를 HTML이 아니라 첨부 PDF에만 두므로 비어 있을 수 있다.
   const azMatch =
     body.match(/(?:GZ|Aktenzeichen|Geschäftszeichen)\s*:?\s*([IVX]+\s+[A-Z]\s+\d+[^\n,;]*)/i) ??
     body.match(/\b([IVX]+\s+[A-Z]\s+\d+\s*-\s*S\s+\d+[\/\d]*)/);
   const az = azMatch ? azMatch[1].trim().replace(/\s+/g, " ") : "";
 
-  // 날짜 추출 — "vom DD. MMMM YYYY" 또는 ISO/DE 날짜
-  const date = extractDate(body) ?? extractDate(html) ?? "";
+  // 날짜 추출 — URL 경로의 YYYY-MM-DD(발행일) 우선, 다음 <time datetime>, 마지막으로 본문의 날짜 표기
+  const urlDate = url.match(/\/(20\d{2}-\d{2}-\d{2})-[^/]*$/);
+  const timeTag = html.match(/<time[^>]+datetime=["'](20\d{2}-\d{2}-\d{2})/i);
+  const date = urlDate?.[1] ?? timeTag?.[1] ?? extractDate(body) ?? "";
 
   // 분야 추출 — URL 경로 또는 빵부스러기 네비게이션
   const subjectArea = extractSubjectArea(url, html);
@@ -236,75 +245,143 @@ export async function getBmfSchreibenByUrl(url: string): Promise<BMFSchreiben> {
 }
 
 /**
+ * BMF-Schreiben 목록 페이지(SiteGlobals/Forms/Listen/DE/BMF_Schreiben)의 결과 항목.
+ * AZ는 목록에 없으므로 비어 있고, 필요할 때 상세 페이지에서 채운다.
+ */
+export interface BMFListEntry {
+  title: string;
+  url: string;
+  /** ISO 날짜 (YYYY-MM-DD), 목록의 <time datetime> 기준 */
+  date: string;
+  /** 목록 배지 텍스트 (예: "BMF-Schreiben", "Artikel") */
+  badge: string;
+}
+
+/**
+ * BMF 목록/검색 결과 HTML에서 항목을 뽑는다 (2026-10 사이트 구조).
+ *
+ *   <li class="bmf-list-entry">
+ *     <h3 class="bmf-entry-title"><a href="Content/DE/Downloads/BMF_Schreiben/..." class="bmf-resultlist-teaser-link"><span>제목</span></a></h3>
+ *     <div class="bmf-date"><time datetime="2025-10-15T00:00">15.10.2025</time></div>
+ *     <div class="bmf-badge"><span class="bmf-badge-text">BMF-Schreiben</span></div>
+ *   </li>
+ */
+export function parseBmfListEntries(html: string): BMFListEntry[] {
+  const entries: BMFListEntry[] = [];
+  const itemRegex = /<li[^>]*class="bmf-list-entry[^"]*"[^>]*>([\s\S]*?)<\/li>/gi;
+  let m;
+  while ((m = itemRegex.exec(html)) !== null) {
+    const block = m[1];
+    const link =
+      block.match(/<a[^>]+href=["']([^"']+)["'][^>]*class=["'][^"']*bmf-resultlist-teaser-link[^"']*["'][^>]*>([\s\S]*?)<\/a>/i) ??
+      block.match(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i);
+    if (!link) continue;
+    const rawHref = link[1].replace(/&amp;/g, "&");
+    const url = rawHref.startsWith("http") ? rawHref : `${BMF_BASE}${rawHref.startsWith("/") ? "" : "/"}${rawHref}`;
+    const timeMatch = block.match(/<time[^>]+datetime=["'](\d{4}-\d{2}-\d{2})/i);
+    const badgeMatch = block.match(/bmf-badge-text["'][^>]*>\s*([^<]+?)\s*</i);
+    entries.push({
+      title: stripHtml(link[2]).replace(/\s+/g, " ").trim(),
+      url,
+      date: timeMatch?.[1] ?? extractDate(block) ?? "",
+      badge: badgeMatch?.[1] ?? "",
+    });
+  }
+  return entries;
+}
+
+/** BMF-Schreiben 전용 목록 양식 (bmf_schreiben.html의 form name="publicationSearch"). */
+const BMF_LIST_FORM = `${BMF_BASE}/SiteGlobals/Forms/Listen/DE/BMF_Schreiben/BMF_Schreiben_Formular.html`;
+/** 양식의 hidden resourceId — 사이트 개편 시 bmf_schreiben.html에서 다시 읽는다. */
+const BMF_LIST_RESOURCE_ID = "240030";
+/** 목록을 BMF-Schreiben 폴더로 한정한다 (없으면 사이트 전체 1,700여 건이 섞인다). */
+const BMF_LIST_FOLDER = "/bmf/Content/DE/Downloads/BMF_Schreiben/*";
+const BMF_LIST_PAGE_SIZE = 10;
+/** azPattern 검증을 위해 상세 페이지를 열어 보는 최대 후보 수 */
+const BMF_AZ_DETAIL_LIMIT = 10;
+
+/**
  * BMF-Schreiben 목록을 조회한다.
  *
- * 기본 진입점: BMF "Schreiben" 검색 페이지를 스크랩한다.
- *   https://www.bundesfinanzministerium.de/SiteGlobals/Forms/Suche/Expertensuche/Expertensuche_Formular.html
- *     ?gtp=*_list%253D1
- *     &resourceId=...
- *     &sortOrder=dateOfIssue_dt+desc
+ * 2026-10 기준 사이트 구조: 예전 Expertensuche(/Suche/Expertensuche/…)는 404이고,
+ * 전용 목록 양식이 GET 파라미터로 검색어·기간을 받는다.
+ *   BMF_Schreiben_Formular.html?resourceId=240030&pageLocale=de&submit=Anwenden
+ *     &folder=/bmf/Content/DE/Downloads/BMF_Schreiben/*
+ *     &sortOrder=dateOfIssue_dt desc
  *     &templateQueryString=<query>
- *     &dateOfIssue.GROUP=1&dateOfIssue.START=YYYY-MM-DD&dateOfIssue.END=YYYY-MM-DD
+ *     &dateOfIssueAfter5=YYYY-MM-DD&dateOfIssueBefore5=YYYY-MM-DD
+ *     &pageNo=<n>
+ * baseDocType=BMFSchreiben 을 붙이면 빈 페이지가 오므로 쓰지 않는다. AZ는 목록에 없어
+ * azPattern 필터는 상세 페이지를 열어 확인한다(최대 BMF_AZ_DETAIL_LIMIT건).
  */
 export async function searchBmfSchreiben(
   filters: BMFSearchFilters = {},
 ): Promise<BMFSearchResult[]> {
   const limit = filters.limit ?? 25;
-  const params = new URLSearchParams();
-  params.set("gtp", "*_list%253D1");
-  params.set("sortOrder", "dateOfIssue_dt+desc");
-  if (filters.query) params.set("templateQueryString", filters.query);
-  if (filters.dateFrom) {
-    params.set("dateOfIssue.GROUP", "1");
-    params.set("dateOfIssue.START", filters.dateFrom);
-  }
-  if (filters.dateTo) {
-    params.set("dateOfIssue.GROUP", "1");
-    params.set("dateOfIssue.END", filters.dateTo);
-  }
-
-  const searchUrl = `${BMF_BASE}/SiteGlobals/Forms/Suche/Expertensuche/Expertensuche_Formular.html?${params.toString()}`;
-  const html = await fetchBmfHtml(searchUrl);
-
+  const maxPages = Math.ceil(limit / BMF_LIST_PAGE_SIZE) + 1;
   const results: BMFSearchResult[] = [];
   const seen = new Set<string>();
+  let detailLookups = 0;
+  // 페이징은 GSB 방식 `gtp=<listId>_list=<n>`; listId(예: 240018)는 1페이지의 페이저 링크에서 읽는다.
+  let listId: string | null = null;
 
-  // 결과 항목 패턴: <article class="result"> ... <a href="...">제목</a> ... <time>날짜</time> ... </article>
-  const itemRegex = /<(?:article|li)[^>]*class="[^"]*(?:result|searchResult|teaser)[^"]*"[^>]*>([\s\S]*?)<\/(?:article|li)>/gi;
-  let m;
-  while ((m = itemRegex.exec(html)) !== null && results.length < limit) {
-    const block = m[1];
-    const linkMatch = block.match(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i);
-    if (!linkMatch) continue;
-
-    const href = linkMatch[1].startsWith("http")
-      ? linkMatch[1]
-      : `${BMF_BASE}${linkMatch[1].startsWith("/") ? "" : "/"}${linkMatch[1]}`;
-    if (seen.has(href)) continue;
-    seen.add(href);
-
-    const title = stripHtml(linkMatch[2]).trim();
-    const date = extractDate(block) ?? "";
-    const azMatch = block.match(/\b([IVX]+\s+[A-Z]\s+\d+\s*-\s*S\s+\d+[\/\d]*)/);
-    const az = azMatch ? azMatch[1].replace(/\s+/g, " ").trim() : "";
-
-    if (filters.azPattern && !az.toLowerCase().includes(filters.azPattern.toLowerCase())) {
-      continue;
+  for (let page = 1; page <= maxPages && results.length < limit; page++) {
+    const params = new URLSearchParams({
+      resourceId: BMF_LIST_RESOURCE_ID,
+      pageLocale: "de",
+      submit: "Anwenden",
+      folder: BMF_LIST_FOLDER,
+      sortOrder: "dateOfIssue_dt desc",
+    });
+    if (filters.query) params.set("templateQueryString", filters.query);
+    if (filters.dateFrom) params.set("dateOfIssueAfter5", filters.dateFrom);
+    if (filters.dateTo) params.set("dateOfIssueBefore5", filters.dateTo);
+    if (page > 1) {
+      if (!listId) break;
+      params.set("gtp", `${listId}_list=${page}`);
     }
-    if (filters.subjectArea) {
-      const area = extractSubjectArea(href, block) ?? "";
-      if (!area.toLowerCase().includes(filters.subjectArea.toLowerCase())) {
+
+    const html = await fetchBmfHtml(`${BMF_LIST_FORM}?${params.toString()}`);
+    listId ??= html.match(/gtp=(\d+)_list/)?.[1] ?? null;
+    const entries = parseBmfListEntries(html);
+    let newOnPage = 0;
+
+    for (const entry of entries) {
+      if (results.length >= limit) break;
+      if (seen.has(entry.url)) continue;
+      seen.add(entry.url);
+      newOnPage++;
+
+      // 목록에는 안내 기사(Artikel)도 섞여 들어오므로 BMF-Schreiben만 남긴다.
+      if (entry.badge && !/BMF-Schreiben/i.test(entry.badge) && !/BMF_Schreiben/.test(entry.url)) continue;
+      if (filters.dateFrom && entry.date && entry.date < filters.dateFrom) continue;
+      if (filters.dateTo && entry.date && entry.date > filters.dateTo) continue;
+
+      const subjectArea = extractSubjectArea(entry.url, "");
+      if (filters.subjectArea && !(subjectArea ?? "").toLowerCase().includes(filters.subjectArea.toLowerCase())) {
         continue;
       }
+
+      let az = "";
+      if (filters.azPattern) {
+        if (detailLookups >= BMF_AZ_DETAIL_LIMIT) break;
+        detailLookups++;
+        try {
+          az = (await getBmfSchreibenByUrl(entry.url)).az;
+        } catch {
+          continue;
+        }
+        // AZ가 HTML에 없으면(2026 사이트는 PDF에만 둔다) 후보로 남기고, AZ가 있는데 다르면 버린다.
+        if (az && !az.toLowerCase().replace(/\s+/g, " ").includes(filters.azPattern.toLowerCase().replace(/\s+/g, " "))) {
+          continue;
+        }
+      }
+
+      results.push({ az, date: entry.date, title: entry.title, subjectArea, url: entry.url });
     }
 
-    results.push({
-      az,
-      date,
-      title,
-      subjectArea: extractSubjectArea(href, block),
-      url: href,
-    });
+    // 새 항목이 없거나 페이지가 다 차지 않았으면 마지막 페이지다.
+    if (newOnPage === 0 || entries.length < BMF_LIST_PAGE_SIZE) break;
   }
 
   return results;
