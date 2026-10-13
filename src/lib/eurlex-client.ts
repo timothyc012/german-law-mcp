@@ -40,7 +40,7 @@ async function runSparql(query: string): Promise<SparqlBinding[]> {
     headers: {
       Accept: "application/sparql-results+json",
     },
-  }, { timeoutMs: 10_000, source: "EUR-Lex CELLAR" });
+  }, { timeoutMs: 30_000, source: "EUR-Lex CELLAR" });
 
   if (!res.ok) {
     throw new Error(`CELLAR SPARQL error: ${res.status}`);
@@ -79,10 +79,11 @@ export async function fetchByCelex(celex: string): Promise<EurLexDocument | null
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 SELECT DISTINCT ?title ?date WHERE {
-  ?work cdm:resource_legal_id_celex "${celex}" ;
+  ?work cdm:resource_legal_id_celex ?celex ;
         cdm:work_date_document ?date .
-  ?work cdm:work_has_expression ?expr .
-  ?expr cdm:expression_title ?title ;
+  FILTER(STR(?celex) = "${celex}")
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_title ?title ;
         cdm:expression_uses_language <http://publications.europa.eu/resource/authority/language/DEU> .
 }
 LIMIT 1
@@ -102,29 +103,49 @@ LIMIT 1
 }
 
 /**
- * 키워드로 EU 법령을 검색한다 (독일어 제목 기준).
+ * 검색어를 SPARQL 제목 필터로 바꾼다.
+ *
+ * 예전에는 검색어 전체가 독일어 제목의 부분 문자열이어야 해서 두 단어 이상이면 거의 0건이었다
+ * ("IFRS 18 Verordnung" → 0건). 이제는 단어마다 CONTAINS를 AND로 묶고, 제목 언어는 호출자가 고른다.
+ */
+export function buildEurLexTitleFilter(keyword: string): string {
+  // CELLAR는 Virtuoso라서 제목 전문 색인(bif:contains)을 쓸 수 있다. 부분 문자열 FILTER(CONTAINS)는
+  // 제목 전체를 훑느라 90초를 넘겨 타임아웃이 났고, 전문 검색은 같은 질의가 1–9초에 끝난다(2026-10-13 측정).
+  // 토큰은 글자·숫자만 남긴다(따옴표·연산자 주입 방지). 하이픈 단어는 두 토큰으로 갈라진다.
+  const tokens = keyword
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t.length > 0);
+  if (tokens.length === 0) return "FILTER(false)";
+  return `?title bif:contains '${tokens.map((t) => `"${t}"`).join(" AND ")}' .`;
+}
+
+/**
+ * 키워드로 EU 법령을 검색한다.
+ * 독일어 제목을 먼저 보고, 결과가 없으면 영어 제목으로 다시 찾는다
+ * (회계 규정처럼 독일어 제목에 영어 고유명사가 섞인 문서도 잡힌다).
  */
 export async function searchEurLex(
   keyword: string,
   limit = 5,
 ): Promise<EurLexDocument[]> {
-  const escaped = keyword.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ").replace(/\r/g, "").toLowerCase();
-
-  const query = `
+  const filter = buildEurLexTitleFilter(keyword);
+  const buildQuery = (lang: "DEU" | "ENG") =>
+    `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 SELECT DISTINCT ?celex ?title ?date WHERE {
   ?work cdm:resource_legal_id_celex ?celex ;
         cdm:work_date_document ?date .
-  ?work cdm:work_has_expression ?expr .
-  ?expr cdm:expression_title ?title ;
-        cdm:expression_uses_language <http://publications.europa.eu/resource/authority/language/DEU> .
-  FILTER(CONTAINS(LCASE(STR(?title)), "${escaped}"))
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_title ?title ;
+        cdm:expression_uses_language <http://publications.europa.eu/resource/authority/language/${lang}> .
+  ${filter}
 }
 ORDER BY DESC(?date)
 LIMIT ${limit}
 `.trim();
 
-  const bindings = await runSparql(query);
+  let bindings = await runSparql(buildQuery("DEU"));
+  if (bindings.length === 0) bindings = await runSparql(buildQuery("ENG"));
   return bindings.map((b) => {
     const celex = b["celex"]?.value ?? "";
     return {
